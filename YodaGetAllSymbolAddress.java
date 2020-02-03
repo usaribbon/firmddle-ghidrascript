@@ -10,9 +10,9 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.concurrent.TimeUnit;
 
 import ghidra.app.plugin.core.navigation.locationreferences.ReferenceUtils;
 import ghidra.app.script.GhidraScript;
@@ -38,7 +38,7 @@ import ghidra.program.model.symbol.SymbolTable;
 import ghidra.program.util.FunctionSignatureFieldLocation;
 import ghidra.util.exception.CancelledException;
 
-public class YodaGetSocketSymbolAddress extends GhidraScript {
+public class YodaGetAllSymbolAddress extends GhidraScript {
 
      /**
      * @throws CancelledException 
@@ -48,19 +48,20 @@ public class YodaGetSocketSymbolAddress extends GhidraScript {
     @Override
     public void run() throws CancelledException, DecompileException {
         monitor.setMessage("Counting symbols...");
-        
+
         //measure running time
         long runningTimeStart = System.nanoTime();
         
         SymbolTable st = state.getCurrentProgram().getSymbolTable();
         SymbolIterator iter = st.getSymbolIterator(true);
-        int count = 0;
+        //int count = 0;
         while (iter.hasNext() && !monitor.isCancelled()) {
             Symbol sym = iter.next();
-            //println(sym.getName()); print all symbol
+            //print all symbol
+            println(sym.getName()); 
             if (sym != null && sym.getName().contains("socket")) {
             	Address addr = sym.getAddress();
-                println("socket() @ " + addr.toString());
+                println("addr @ " + addr.toString());
             	Listing listing = state.getCurrentProgram().getListing();
             	Function func = listing.getFunctionContaining(addr);
             	if (func == null) {
@@ -88,11 +89,10 @@ public class YodaGetSocketSymbolAddress extends GhidraScript {
             			if(refFunc == null) {
             				continue;
             			}
-            			
-            			decompileFunction2(refFunc, decomplib);
+            			decompileFunction(refFunc, decomplib);
             			
             			//Step B
-            			printOutgoingCalls(refFunc, decomplib, 2);
+            			printOutgoingCalls(refFunc, decomplib);
             		}
             	} finally {
             		decomplib.dispose();
@@ -122,7 +122,7 @@ public class YodaGetSocketSymbolAddress extends GhidraScript {
         println( "TIME (msec) : " + timeElapsed / 1000000 );
         println( "TIME (sec) : " +  TimeUnit.NANOSECONDS.toSeconds(timeElapsed));
     }
-
+    
     int count = 0;
     private void addCount() {
     	count += 1;
@@ -132,9 +132,10 @@ public class YodaGetSocketSymbolAddress extends GhidraScript {
     	return count;
     }
     
+    
     HighFunction hfunction = null;
     ClangTokenGroup docroot = null;
-    public DecompileResults decompileFunction2(Function f, DecompInterface decomplib) {
+    public DecompileResults decompileFunction(Function f, DecompInterface decomplib) {
     	// decomplib.setSimplificationStyle("normalize", null);
         // HighFunction hfunction = decomplib.decompileFunction(f);
 
@@ -161,6 +162,7 @@ public class YodaGetSocketSymbolAddress extends GhidraScript {
 
         return decompRes;
     }
+    /*
     private void decompileFunction(Function func) throws DecompileException, NullPointerException {
     	DecompileOptions options = new DecompileOptions();
     	DecompInterface ifc = new DecompInterface();
@@ -184,6 +186,7 @@ public class YodaGetSocketSymbolAddress extends GhidraScript {
     		println("error :" + e + " at " + res.getFunction().getName());
     	}
     }
+    */
     
 	private DecompInterface setUpDecompiler(Program program) {
 		DecompInterface decomplib = new DecompInterface();
@@ -226,17 +229,11 @@ public class YodaGetSocketSymbolAddress extends GhidraScript {
 
 		for (Function f : list) {
 			println("Incoming Function Call: " + f.getName() + " @ " + f.getEntryPoint());
-	    	decompileFunction2(f, decomplib);
+	    	decompileFunction(f, decomplib);
 		}
 	}
 
-	private boolean printOutgoingCalls(Function function, DecompInterface decomplib, int depth) throws NullPointerException, DecompileException {
-		//println("DEPTH: " + depth);
-		if (depth == 0) {
-			return false;
-		} else {
-			depth -= 1;
-		}
+	private void printOutgoingCalls(Function function, DecompInterface decomplib) throws NullPointerException, DecompileException {
 		AddressSetView functionBody = function.getBody();
 		Set<Reference> references = getReferencesFrom(currentProgram, functionBody);
 		Set<Function> outgoingFunctions = new HashSet<>();
@@ -246,19 +243,17 @@ public class YodaGetSocketSymbolAddress extends GhidraScript {
 			Function calledFunction = functionManager.getFunctionAt(toAddress);
 			maybeAddIncomingFunction(outgoingFunctions, reference, calledFunction);
 		}
-
 		// sort them by address
 		List<Function> list = new ArrayList<>(outgoingFunctions);
 		Collections.sort(list, (f1, f2) -> f1.getEntryPoint().compareTo(f2.getEntryPoint()));
 
 		for (Function f : list) {
-			//println("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
+			println("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
     		addCount();
-	    	decompileFunction2(f, decomplib);
+	    	decompileFunction(f, decomplib);
 	    	// Step C
-	    	printOutgoingCalls(f, decomplib, depth);
+	    	printOutgoingCalls(f, decomplib);
 		}
-		return true;
 	}
 
 	private void maybeAddIncomingFunction(Set<Function> incomingFunctions, Reference reference,
