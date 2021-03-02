@@ -7,6 +7,7 @@
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -40,6 +41,7 @@ import ghidra.util.exception.CancelledException;
 
 public class YodaGetAllSymbolAddress extends GhidraScript {
 
+    HashMap<String, Integer> searchedList = new HashMap<String, Integer>();
      /**
      * @throws CancelledException 
      * @throws DecompileException 
@@ -48,25 +50,33 @@ public class YodaGetAllSymbolAddress extends GhidraScript {
     @Override
     public void run() throws CancelledException, DecompileException {
         monitor.setMessage("Counting symbols...");
-
+        
         //measure running time
         long runningTimeStart = System.nanoTime();
         
         SymbolTable st = state.getCurrentProgram().getSymbolTable();
         SymbolIterator iter = st.getSymbolIterator(true);
         //int count = 0;
+        
         while (iter.hasNext() && !monitor.isCancelled()) {
             Symbol sym = iter.next();
             //print all symbol
-            println(sym.getName()); 
-            if (sym != null && sym.getName().contains("socket")) {
+            //println(sym.getName()); 
+            if (sym != null) {
             	Address addr = sym.getAddress();
-                println("addr @ " + addr.toString());
+                //println("addr @ " + addr.toString());
             	Listing listing = state.getCurrentProgram().getListing();
             	Function func = listing.getFunctionContaining(addr);
             	if (func == null) {
-            		println("No Function at address" + currentAddress);
-            		return;
+            		//println("No Function at address" + currentAddress);
+            		try {
+            			if(searchedList.containsKey(func.getName())) {
+            				addSearchedFunction(func.getName());
+            			}
+            			continue;
+            		} catch (NullPointerException e){
+            			continue;
+                	}
             	}
             	
             	DecompInterface decomplib = setUpDecompiler(state.getCurrentProgram());
@@ -74,7 +84,7 @@ public class YodaGetAllSymbolAddress extends GhidraScript {
             	try {
             		if (!decomplib.openProgram(state.getCurrentProgram())) {
             			println("Decompile Error:" + decomplib.getLastMessage());
-            			return;
+            			continue;
             		}
             		Reference refs[] = sym.getReferences(null);
             		
@@ -89,11 +99,15 @@ public class YodaGetAllSymbolAddress extends GhidraScript {
             			if(refFunc == null) {
             				continue;
             			}
+            			//println(refFunc.getName());
             			decompileFunction(refFunc, decomplib);
             			
             			//Step B
-            			printOutgoingCalls(refFunc, decomplib);
+            			//printOutgoingCalls(refFunc, decomplib);
+            			printIncomingCalls(refFunc, decomplib);
             		}
+            	} catch (NullPointerException e){
+        			continue;
             	} finally {
             		decomplib.dispose();
             	}
@@ -110,7 +124,7 @@ public class YodaGetAllSymbolAddress extends GhidraScript {
                 	*/
                 }
                 
-            }
+           }
         }
         println(getCount() +" called");
 
@@ -131,7 +145,10 @@ public class YodaGetAllSymbolAddress extends GhidraScript {
     private int getCount() {
     	return count;
     }
-    
+
+    private void addSearchedFunction(String name) {
+    	searchedList.put(name, searchedList.get(name)+1);
+    }
     
     HighFunction hfunction = null;
     ClangTokenGroup docroot = null;
@@ -139,6 +156,14 @@ public class YodaGetAllSymbolAddress extends GhidraScript {
     	// decomplib.setSimplificationStyle("normalize", null);
         // HighFunction hfunction = decomplib.decompileFunction(f);
 
+    	if (searchedList.containsKey(f.getName())) {
+    		// Skip decompile if it is already searched
+    		//print("Skipped " + f.getName() + "," + searchedList.get(f.getName()) + "\n");
+    		addSearchedFunction(f.getName());
+    		return null;
+    	}
+		addCount();
+    	searchedList.put(f.getName(), 1);
         DecompileResults decompRes = decomplib.decompileFunction(f, decomplib.getOptions().getDefaultTimeout(), monitor);
         //String statusMsg = decomplib.getDecompileMessage();
         if(f.getName().contains("str")) {
@@ -228,8 +253,10 @@ public class YodaGetAllSymbolAddress extends GhidraScript {
 		Collections.sort(list, (f1, f2) -> f1.getEntryPoint().compareTo(f2.getEntryPoint()));
 
 		for (Function f : list) {
-			println("Incoming Function Call: " + f.getName() + " @ " + f.getEntryPoint());
+			//println("Incoming Function Call: " + f.getName() + " @ " + f.getEntryPoint());
 	    	decompileFunction(f, decomplib);
+	    	// Step C
+	    	//printIncomingCalls(f, decomplib);
 		}
 	}
 
@@ -248,8 +275,7 @@ public class YodaGetAllSymbolAddress extends GhidraScript {
 		Collections.sort(list, (f1, f2) -> f1.getEntryPoint().compareTo(f2.getEntryPoint()));
 
 		for (Function f : list) {
-			println("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
-    		addCount();
+			//println("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
 	    	decompileFunction(f, decomplib);
 	    	// Step C
 	    	printOutgoingCalls(f, decomplib);
