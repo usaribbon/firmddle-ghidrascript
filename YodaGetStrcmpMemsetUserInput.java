@@ -64,7 +64,8 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
     private int maxDepth = 2;
 	//logger
     private Logger logger = Logger.getLogger("MyLog");
-    private FileHandler fh;  
+    private FileHandler fh;
+    private FlatDecompilerAPI decompApi;
     
      /**
      * @throws Exception 
@@ -120,6 +121,9 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
         
         SymbolTable st = state.getCurrentProgram().getSymbolTable();
         SymbolIterator iter = st.getSymbolIterator(true);
+        
+        decompApi = setUpDecompiler();
+    	
         while (iter.hasNext() && !monitor.isCancelled()) {
             Symbol sym = iter.next();
             //FoundString foundString = iter.next();
@@ -131,7 +135,6 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
         	Listing listing = state.getCurrentProgram().getListing();
         	Function func = listing.getFunctionContaining(addr);
 
-        	FlatDecompilerAPI decomplib = setUpDecompiler();
 
             if (sym != null && sym.getName().matches("strn?cmp")) {
     			//don't start function search if it's already searched as start point
@@ -168,7 +171,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
         			
         			try {
         				//println(sym.getName());
-        				printIncomingCallsInit(refFunc, decomplib);
+        				printIncomingCallsInit(refFunc, decompApi);
         			} catch(NullPointerException e){
                     	continue;
                     }
@@ -190,6 +193,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
         //close log
         logger.removeHandler(fh);
         fh.close();
+        decompApi.dispose();
 
         logger.setUseParentHandlers(false);
 
@@ -467,7 +471,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
 
 
 	private FlatDecompilerAPI setUpDecompiler() throws Exception {
-		FlatDecompilerAPI decompApi = new FlatDecompilerAPI(this);
+		decompApi = new FlatDecompilerAPI(this);
 		if(decompApi.getDecompiler() == null) {
 			decompApi.initialize();
 		}
