@@ -61,7 +61,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
     private HashMap<String, Integer> searchedList = new HashMap<String, Integer>();
     private int searchedCount = 0;
     private int candidateCount = 0;
-    private int maxDepth = 3;
+    private int maxDepth = 2;
 	//logger
     private Logger logger = Logger.getLogger("MyLog");
     private FileHandler fh;  
@@ -132,10 +132,16 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
         	Function func = listing.getFunctionContaining(addr);
 
         	FlatDecompilerAPI decomplib = setUpDecompiler();
-            
+
             if (sym != null && sym.getName().matches("strn?cmp")) {
-            	logger.info(sym.getName());
-            	print(sym.getName());
+    			//don't start function search if it's already searched as start point
+    	    	if (searchedList.containsKey(sym.getName())) {
+    	    		// Skip decompile if it is already searched
+    	    		//print("Skipped " + f.getName() + "," + searchedList.get(f.getName()) + "\n");
+    	    		searchedList.put(sym.getName(), searchedList.get(sym.getName())+1);
+    				continue;
+    	    	}
+    	    	searchedList.put(sym.getName(), 1);
         		Reference refs[] = sym.getReferences(null);
         		
         		for(int i=0; i<refs.length;i++) {             			
@@ -161,6 +167,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
                     }*/
         			
         			try {
+        				//println(sym.getName());
         				printIncomingCallsInit(refFunc, decomplib);
         			} catch(NullPointerException e){
                     	continue;
@@ -211,14 +218,6 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
     public DecompileResults decompileFunction2(Function f, FlatDecompilerAPI flatApi) {
     	// decomplib.setSimplificationStyle("normalize", null);
         // HighFunction hfunction = decomplib.decompileFunction(f);
-    	if (searchedList.containsKey(f.getName())) {
-    		// Skip decompile if it is already searched
-    		//print("Skipped " + f.getName() + "," + searchedList.get(f.getName()) + "\n");
-    		searchedList.put(f.getName(), searchedList.get(f.getName())+1);
-    		return null;
-    	}
-    	searchedList.put(f.getName(), 1);
-
         try {
 
             Stream<String> resLines = null;
@@ -241,7 +240,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
             String matched = "";
 
      		addSearchedCount();
-            //　strcmp("password", Stack) どちらかが埋め込み文字列であること["'].*["'] -> ("password", hogehoge) や(hogehoge,'password')をさがす
+            //strcmp("password", Stack) どちらかが埋め込み文字列であること["'].*["'] -> ("password", hogehoge) や(hogehoge,'password')をさがす
             for(String str: decompiled) {
             	//mac: デコンパイル結果に埋め込み文字列がでてくるが，winはPTR__で表示されるので注意
             	if(str.contains("str")) {
@@ -254,7 +253,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
                 Matcher m = p.matcher(str);
                 if (m.find()){
                 	//logger.info(str);
-                	println(str);
+                	//println(str);
                 	String matchstr = m.group();
                   if(m.group(1).contains("param") || m.group(1).contains("Stack") || m.group(1).contains("DAT") || m.group(1).contains("local")) {
 
@@ -295,7 +294,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
             	logger.info("varname"+var);
                 //first low that val appers
             	if(found) {
-               	 	rootValue = checkParentValue(var, decompiled, f, flatApi, maxDepth); 
+               	 	rootValue = checkParentValue(var, decompiled, f, flatApi); 
                	 	logger.info("rootvalue" + rootValue); 
             	}
             }
@@ -304,7 +303,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
             for(String var : result_strncmp_etc) {  
             	logger.info("varname etc "+var);
                 //first low that val appers
-           	 	rootValue = checkParentValue(var, decompiled, f, flatApi, maxDepth); 
+           	 	rootValue = checkParentValue(var, decompiled, f, flatApi); 
            	 	logger.info("rootvalue" + rootValue); 
             }
             
@@ -321,12 +320,8 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
     }
 
 	
-	private String checkParentValue(String var, List<String> decompiled, Function f, FlatDecompilerAPI flatApi, int depth) {
-		if(depth == 0) {
-			return "none";
-		}else {
-			depth-=1;
-		}
+	private String checkParentValue(String var, List<String> decompiled, Function f, FlatDecompilerAPI flatApi) {
+
 		for(String line :decompiled) {
 			String right  = "";
 			String left   = "";
@@ -374,7 +369,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
         			logger.info("printIncomingCalls(f, decomplib, f.getName(),paramN);"+ f.getName() + paramN);
      
                 	try {
-                		printIncomingCalls(f, f.getName(), paramN, flatApi);
+                		printIncomingCalls(f, f.getName(), paramN, flatApi, maxDepth);
                 	} catch(CancelledException e) {
                 		println("cancelled expection at 387" + e);
                 	} catch(DecompileException e) {
@@ -383,8 +378,9 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
                 		println("cancelled expection at 387" + e);
                 	}
                 }else {
+                	return null;
                 	//strcmpの変数→その代入元→代入内容が上記以外の変数だったら、その変数で再度探索してみる
-                	return checkParentValue(right, decompiled, f, flatApi, depth); 
+                	//return checkParentValue(right, decompiled, f, flatApi, depth); 
                 }
                 break;
         	}else {
@@ -394,8 +390,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
 		return null;
 	}
 
-    public DecompileResults decompileFunctionRecursive(Function f, String childFunctionName, int childVar, FlatDecompilerAPI flatApi) {
-       
+    public DecompileResults decompileFunctionRecursive(Function f, String childFunctionName, int childVar, FlatDecompilerAPI flatApi, int depth) {
 
         try {
 
@@ -427,11 +422,11 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
             		logger.info("varToBackdoor" + varToBackdoor);
                     //first low that val appers
             		
-            		String res = checkParentValue(varToBackdoor,decompiled, f, flatApi, maxDepth);
+            		String res = checkParentValue(varToBackdoor,decompiled, f, flatApi);
                     
             		if(res != null) {
                     	try {
-                    		printIncomingCalls(f, f.getName(),childVar, flatApi);
+                    		printIncomingCalls(f, f.getName(),childVar, flatApi, depth);
                     	} catch(CancelledException e) {
                     		println("cancelled expection at 387" + e);
                     	} catch(DecompileException e) {
@@ -513,6 +508,15 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
 		Collections.sort(list, (f1, f2) -> f1.getEntryPoint().compareTo(f2.getEntryPoint()));
 
 		for (Function f : list) {
+
+			//don't start function search if it's already searched as start point
+	    	if (searchedList.containsKey(f.getName())) {
+	    		// Skip decompile if it is already searched
+	    		//print("Skipped " + f.getName() + "," + searchedList.get(f.getName()) + "\n");
+	    		searchedList.put(f.getName(), searchedList.get(f.getName())+1);
+	    		return true;
+	    	}
+	    	searchedList.put(f.getName(), 1);
 			println("printIncomingCallsInit: " + f.getName() + " @ " + f.getEntryPoint());
 			decompileFunction2(f, flatApi);
 	    	//decompileFunctionRecursive(f, decomplib);
@@ -525,8 +529,12 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
 		return true;
 	}
 	
-	private boolean printIncomingCalls(Function function,  String childFunctionName, int paramN, FlatDecompilerAPI flatApi) throws CancelledException, NullPointerException, DecompileException {
-		
+	private boolean printIncomingCalls(Function function,  String childFunctionName, int paramN, FlatDecompilerAPI flatApi, int depth) throws CancelledException, NullPointerException, DecompileException {
+		if(depth == 0) {
+			return false;
+		}
+		depth-=1;
+
 		Address functionAddress = function.getEntryPoint();
 		FunctionSignatureFieldLocation location =
 			new FunctionSignatureFieldLocation(function.getProgram(), functionAddress);
@@ -546,7 +554,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
 
 		for (Function f : list) {
 			println("Incoming Function Call: " + f.getName() + " @ " + f.getEntryPoint());
-			decompileFunctionRecursive(f, childFunctionName, paramN, flatApi);
+			decompileFunctionRecursive(f, childFunctionName, paramN, flatApi, depth);
 	    	// Step C
 	    	//printIncomingCalls(f, decomplib, "now", 2);
 //
