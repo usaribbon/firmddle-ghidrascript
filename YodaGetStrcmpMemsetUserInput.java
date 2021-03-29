@@ -252,63 +252,26 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
             		//println("ORG:"+str);
             		//logger.info(str);
             	}
-                String regex = ".*strn?cmp\\((.*,[^\"'].*[^\"']|[^\"'].*[^\"'],.*)\\).*";
+                String regex = ".*strn?cmp\\((.*,.*,.*|.*,.*)\\).*";
                 Pattern p = Pattern.compile(regex);
                 Matcher m = p.matcher(str);
                 if (m.find()){
-                	//logger.info(str);
-                	//println(str);
-                	String matchstr = m.group();
-                  if(m.group(1).contains("param") || m.group(1).contains("Stack") || m.group(1).contains("DAT") || m.group(1).contains("local")) {
-
-                      String regex2 = "['\"].*[\"']";
-                      Pattern p2 = Pattern.compile(regex2);
-                      Matcher m2_embeddedString = p2.matcher(m.group(1));
-                      if(m2_embeddedString.find()) {
-                    	  if(m2_embeddedString.group(0).length() > 4) { //embedded string is morethen 4 include quatation
-                    		  matched = m.group(1);
-                    		  logger.info("matched line: " + matched);
-                    		  println("matched line: " + matched);
-                              String var = matched;
-                              var = var.replaceAll("['\"].*[\"']|,|\\(.*\\)|\\*", ""); 
-                              if(!result_strncmp.contains(var)) { 
-                            	  logger.info(str);
-                                  result_strncmp.add(var);
-                                  found = true;
-                              }
-                    	  }
-                      }
-                    	 
-                  }else {
-                      String var = m.group(1);
-                      var = var.replaceAll("['\"].*[\"']|,|\\(.*\\)|\\*", ""); 
-                      if(!result_strncmp_etc.contains(var)) { 
-                    	  logger.info("not matched;"+str);
-                    	  result_strncmp_etc.add(var);
-                      }                   
-                	  
-                  }
-                  
+					//logger.info(str);
+					String matchstr = m.group();
+					//m.group(1)はｓｔｒｃｍｐの引数が表示される，0は全文
+					String[] vars = m.group(1).split(",");
+					for(String var: vars) {
+					  if(!result_strncmp.contains(var)) {
+						  println(str);
+					      result_strncmp.add(var);
+					      String res = checkParentValue(var,decompiled);
+					      if(res != null) {
+						      println(res);
+					      }
+					      
+					  }
+					}
                 }	
-            }
-            //変数名のとりだし
-            String rootValue = "";
-            
-            for(String var : result_strncmp) {  
-            	logger.info("varname"+var);
-                //first low that val appers
-            	if(found) {
-               	 	rootValue = checkParentValue(var, decompiled, f, flatApi); 
-               	 	logger.info("rootvalue" + rootValue); 
-            	}
-            }
-            
-            
-            for(String var : result_strncmp_etc) {  
-            	logger.info("varname etc "+var);
-                //first low that val appers
-           	 	rootValue = checkParentValue(var, decompiled, f, flatApi); 
-           	 	logger.info("rootvalue" + rootValue); 
             }
             
             logger.info("End\n\n\n");
@@ -324,7 +287,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
     }
 
 	
-	private String checkParentValue(String var, List<String> decompiled, Function f, FlatDecompilerAPI flatApi) {
+	private String checkParentValue(String var, List<String> decompiled) {
 
 		for(String line :decompiled) {
 			String right  = "";
@@ -337,127 +300,33 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
     	     		// hoge = var;
     	     		// pcvarも
     	     		//strncmpが最初だったらやらない
+    	     		println("VAR:" + var);
+    	     		println("LINE:" + line);
     	   			right = getVariableAndContent(line, true);
     	   			left = getVariableAndContent(line, false);
-    	   			logger.info("right"+right);
-    	   			logger.info("hoge"+left);
     	     	}    			
     		}catch (Exception e) {
     			logger.info("error happened to reach root");
-	     		return "none";
+	     		return null;
 	     	}
         	if(right.length() > 0) {
              	   addCondidateCount();
                 if(right.contains("memset")) {
-    	            logger.info("Child Function:"+ f.getName());
-    	           	logger.info("Strcmp: "+ var);
-    	   			logger.info(line);
-                	logger.info("memset!!!"+right);
-                	return right;
+                	return "OK: "+ right;
                 }else if(right.contains("uStack") && left.contains("0x")) {
-    	            logger.info("Child Function:"+ f.getName());
-    	           	logger.info("Strcmp: "+ var);
-    	   			logger.info(line);
-                	logger.info("uStack!!!"+right);
-                	return right;
+                	return "OK: "+ right;
                 }else if(right.matches("param_\\d")) {
-        			String childFunctionName = f.getName();
-        			int paramN = 0;
-        			try {
-        				paramN = parseInt(right.replaceAll("param_", ""));
-        				logger.info("right" + paramN);
-        			}catch (NullPointerException e){
-        				logger.info("unyaa");
-        			}
-        			
-        			logger.info("printIncomingCalls(f, decomplib, f.getName(),paramN);"+ f.getName() + paramN);
-     
-                	try {
-                		printIncomingCalls(f, f.getName(), paramN, flatApi, maxDepth);
-                	} catch(CancelledException e) {
-                		println("cancelled expection at 387" + e);
-                	} catch(DecompileException e) {
-                		println("cancelled expection at 387" + e);
-                	} catch(NullPointerException e) {
-                		println("cancelled expection at 387" + e);
-                	}
+                	return right;
                 }else {
-                	return null;
+                    return null;
                 	//strcmpの変数→その代入元→代入内容が上記以外の変数だったら、その変数で再度探索してみる
                 	//return checkParentValue(right, decompiled, f, flatApi, depth); 
                 }
-                break;
-        	}else {
-        		continue;
         	}
         }
 		return null;
 	}
 
-    public DecompileResults decompileFunctionRecursive(Function f, String childFunctionName, int childVar, FlatDecompilerAPI flatApi, int depth) {
-
-        try {
-
-
-            Stream<String> resLines = null;
-			try {
-				resLines = functionDecompile(f, flatApi).lines();
-			} catch (Exception e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-
-            List<String> decompiled = resLines.collect(Collectors.toList());
-            //variables
-            List<String> result_strncmp = new ArrayList<String>();
-            boolean found = false;
-            String matched = "";
-            String[] params = new String[10]; 
-            String varToBackdoor = "";
-            //　strcmp("password", Stack) どちらかが埋め込み文字列であること["'].*["'] -> ("password", hogehoge) や(hogehoge,'password')をさがす
-            logger.info("childFunctionName is "+childFunctionName);
-            for(String str: decompiled) {
-            	if (str.contains(childFunctionName) || str.contains(childFunctionName.replaceAll("\\(|\\)", "_"))) {
-            		logger.info(f.getName());
-            		logger.info("child function" + str);
-            		logger.info("child var" + childVar);
-            		params = str.split(",");
-            		varToBackdoor = params[childVar];
-            		logger.info("varToBackdoor" + varToBackdoor);
-                    //first low that val appers
-            		
-            		String res = checkParentValue(varToBackdoor,decompiled, f, flatApi);
-                    
-            		if(res != null) {
-                    	try {
-                    		printIncomingCalls(f, f.getName(),childVar, flatApi, depth);
-                    	} catch(CancelledException e) {
-                    		println("cancelled expection at 387" + e);
-                    	} catch(DecompileException e) {
-                    		println("cancelled expection at 387" + e);
-                    	} catch(NullPointerException e) {
-                    		println("cancelled expection at 387" + e);
-                    	}
-            		}else {
-            			logger.info("result" + res);
-            		}
-            	}
-
-            }
-           if(found) {
-         		addSearchedCount();
-           }
-            
-            if (hfunction == null)
-            	return null;
-        } catch (NullPointerException e){
-        	return null;
-        }
-
-        return null;
-    }
-    
-    
     private String getVariableAndContent(String line,boolean content) {
     	String left = line.replaceAll(" = .*", ""); 
     	String right = line.replaceAll(".* = |;|\\*|\\+|\\)|\\(", ""); 
@@ -558,7 +427,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
 
 		for (Function f : list) {
 			println("Incoming Function Call: " + f.getName() + " @ " + f.getEntryPoint());
-			decompileFunctionRecursive(f, childFunctionName, paramN, flatApi, depth);
+			//decompileFunctionRecursive(f, childFunctionName, paramN, flatApi, depth);
 	    	// Step C
 	    	//printIncomingCalls(f, decomplib, "now", 2);
 //
