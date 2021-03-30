@@ -61,7 +61,6 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
     private HashMap<String, Integer> searchedList = new HashMap<String, Integer>();
     private int searchedCount = 0;
     private int candidateCount = 0;
-    private int maxDepth = 2;
 	//logger
     private Logger logger = Logger.getLogger("MyLog");
     private FileHandler fh;
@@ -210,7 +209,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
     
     private void addCondidateCount() {
     	candidateCount += 1;
-    	logger.info("candidate"+ candidateCount);
+    	//logger.info("candidate"+ candidateCount);
     }
     
     private int getCondidateCount() {
@@ -238,7 +237,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
             List<String> result_strncmp_etc = new ArrayList<String>(); //not abobe
             
             
-            logger.info("\n\n\nStart" + f.getName());
+            logger.info("\n\n\nStart\\n" + f.getName());
             
             boolean found = false;
             String matched = "";
@@ -262,9 +261,8 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
 					String[] vars = m.group(1).split(",");
 					for(String var: vars) {
 					  if(!result_strncmp.contains(var)) {
-						  println(str);
 					      result_strncmp.add(var);
-					      String res = checkParentValue(var,decompiled);
+					      String res = checkParentValue(var,str,decompiled);
 					      if(res != null) {
 						      println(res);
 					      }
@@ -287,42 +285,54 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
     }
 
 	
-	private String checkParentValue(String var, List<String> decompiled) {
+	private String checkParentValue(String var, String str, List<String> decompiled) {
 
 		for(String line :decompiled) {
 			String right  = "";
 			String left   = "";
 	     	//じぶんの変数がそれっぽかったら出す
 	         //上からパースして、変数の代入元を調べる
+    		String strcmp_line = line; 
     		line = line.replaceAll("[\\(\\)\"\\^\\[\\]\";]", "."); 
     		try {
-    	     	if (!var.contains("'") && !var.contains("/") && var.length() > 2 && line.matches("[^\\(]*" +var+ ".* = .*")) {//それ以外の変数なら代入されているか調べる
+    	     	if (line.contains(var)) {//それ以外の変数なら代入されているか調べる!var.contains("'") && !var.contains("/") && 
     	     		// hoge = var;
     	     		// pcvarも
     	     		//strncmpが最初だったらやらない
-    	     		println("VAR:" + var);
-    	     		println("LINE:" + line);
     	   			right = getVariableAndContent(line, true);
     	   			left = getVariableAndContent(line, false);
+
+    	     		addCondidateCount();
+    	   	     	boolean found = false;
+    	   	     	String root = "";
+                    if(line.matches(".*mem(set|cmp|cpy)(.*"+var+".*).*")) {
+                    	found = true;
+                    }else if(right.contains("uStack") && left.contains("0x")) {
+                    	found = true;
+                    }else if(right.matches(".*param_\\d.*")) {
+                    	found = true;
+                    }else if(right.contains("pcVar")) {
+                    	found = true;
+                    }else {
+                    	found = false;
+                    	//strcmpの変数→その代入元→代入内容が上記以外の変数だったら、その変数で再度探索してみる
+                    	//return checkParentValue(right, decompiled, f, flatApi, depth); 
+                    }
+
+                    if(found) {
+        	   	     	println("VAR:" + var);
+        	   	     	logger.info("VAR:" + var);
+        	   	     	println("STRCMPLINE:" + str);
+        	   	     	logger.info("STRCMPLINE:" + str);
+        	   	     	println("ROOTLINE:" + strcmp_line);
+        	   	     	logger.info("ROOTLINE:" + strcmp_line);
+                        return null;
+                    }
     	     	}    			
     		}catch (Exception e) {
     			logger.info("error happened to reach root");
 	     		return null;
 	     	}
-        	if(right.length() > 0) {
-             	   addCondidateCount();
-                if(right.contains("memset")) {
-                	return "OK: "+ right;
-                }else if(right.contains("uStack") && left.contains("0x")) {
-                	return "OK: "+ right;
-                }else if(right.matches("param_\\d")) {
-                	return right;
-                }else {
-                    return null;
-                	//strcmpの変数→その代入元→代入内容が上記以外の変数だったら、その変数で再度探索してみる
-                	//return checkParentValue(right, decompiled, f, flatApi, depth); 
-                }
-        	}
         }
 		return null;
 	}
@@ -390,7 +400,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
 	    		return true;
 	    	}
 	    	searchedList.put(f.getName(), 1);
-			println("printIncomingCallsInit: " + f.getName() + " @ " + f.getEntryPoint());
+			//println("printIncomingCallsInit: " + f.getName() + " @ " + f.getEntryPoint());
 			decompileFunction2(f, flatApi);
 	    	//decompileFunctionRecursive(f, decomplib);
 	    	// Step C
