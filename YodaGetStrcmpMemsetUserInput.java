@@ -87,7 +87,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
         String homepath = "C:/Users/MinamiYoda/Documents/Program/firmware/docker/result/files/"+date.format(formatter_day)+"/";
         String projectName = this.getProgramFile().getName();
         String FirmwareMaker = this.getProgramFile().getPath();
-        FirmwareMaker = FirmwareMaker.substring(61).replace("\\", "_").replace(".bin", "");
+        FirmwareMaker = FirmwareMaker.substring(40).replace("\\", "_").replace(".bin", "");
         File directory = new File(homepath + FirmwareMaker);
         if (!directory.exists()){
             boolean dir_made = directory.mkdirs();
@@ -302,7 +302,6 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
     	   			right = getVariableAndContent(line, true);
     	   			left = getVariableAndContent(line, false);
 
-    	     		addCondidateCount();
     	   	     	boolean found = false;
     	   	     	String root = "";
                     if(line.matches(".*mem(set|cmp|cpy)(.*"+var+".*).*")) {
@@ -320,6 +319,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
                     }
 
                     if(found) {
+        	     		addCondidateCount();
         	   	     	println("VAR:" + var);
         	   	     	logger.info("VAR:" + var);
         	   	     	println("STRCMPLINE:" + str);
