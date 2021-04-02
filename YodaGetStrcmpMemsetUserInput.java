@@ -134,6 +134,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
         	Listing listing = state.getCurrentProgram().getListing();
         	Function func = listing.getFunctionContaining(addr);
 
+     		addSearchedCount();
 
             if (sym != null && sym.getName().matches("strn?cmp")) {
     			//don't start function search if it's already searched as start point
@@ -242,7 +243,6 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
             boolean found = false;
             String matched = "";
 
-     		addSearchedCount();
             //strcmp("password", Stack) どちらかが埋め込み文字列であること["'].*["'] -> ("password", hogehoge) や(hogehoge,'password')をさがす
             for(String str: decompiled) {
             	//mac: デコンパイル結果に埋め込み文字列がでてくるが，winはPTR__で表示されるので注意
@@ -262,9 +262,9 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
 					for(String var: vars) {
 					  if(!result_strncmp.contains(var)) {
 					      result_strncmp.add(var);
-					      String res = checkParentValue(var,str,decompiled);
-					      if(res != null) {
-						      println(res);
+					      boolean res = checkParentValue(var,str,decompiled);
+					      if(res) {
+					    	  addCondidateCount();
 					      }
 					      
 					  }
@@ -285,7 +285,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
     }
 
 	
-	private String checkParentValue(String var, String str, List<String> decompiled) {
+	private boolean checkParentValue(String var, String str, List<String> decompiled) {
 
 		for(String line :decompiled) {
 			String right  = "";
@@ -319,22 +319,21 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
                     }
 
                     if(found) {
-        	     		addCondidateCount();
         	   	     	println("VAR:" + var);
         	   	     	logger.info("VAR:" + var);
         	   	     	println("STRCMPLINE:" + str);
         	   	     	logger.info("STRCMPLINE:" + str);
         	   	     	println("ROOTLINE:" + strcmp_line);
         	   	     	logger.info("ROOTLINE:" + strcmp_line);
-                        return null;
+                        return true;
                     }
     	     	}    			
     		}catch (Exception e) {
     			logger.info("error happened to reach root");
-	     		return null;
+	     		return false;
 	     	}
         }
-		return null;
+		return false;
 	}
 
     private String getVariableAndContent(String line,boolean content) {
