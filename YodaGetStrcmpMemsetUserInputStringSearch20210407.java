@@ -56,7 +56,7 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
  
 
-public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
+public class YodaGetStrcmpMemsetUserInputStringSearch20210407 extends GhidraScript {
 
     private HashMap<String, Integer> searchedList = new HashMap<String, Integer>();
     private int searchedCount = 0;
@@ -105,7 +105,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
         try {  
 
             // This block configure the logger with handler and formatter  append true
-        	fh = new FileHandler( directory.toString() + "/" + date.format(formatter_time) + ".log", true);
+        	fh = new FileHandler( directory.toString() + "/" + date.format(formatter_time) + "-stringsearch.log", true);
             logger.addHandler(fh);
             fh.setFormatter(new MyCustomFormatter()); 
 
@@ -139,8 +139,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
             if (sym != null && sym.getName().matches("strn?cmp")) {
         		Reference refs[] = sym.getReferences(null);
         		
-        		for(int i=0; i<refs.length;i++) {             			
-        			
+        		for(int i=0; i<refs.length;i++) {      
         			if(monitor.isCancelled()) {
         				break;
         			}
@@ -151,7 +150,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
         			if(refFunc == null) {
         				continue;
         			}
-        			
+           			
         			//decompileFunction2(refFunc, decomplib);
         			
         			//Step B
@@ -240,7 +239,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
             	if(str.contains("str")) {
             		//debug
             		//println("ORG:"+str);
-            		//logger.info(str);
+            		//logger.info("ORG:"str);
             	}
                 String regex = ".*strn?cmp\\((.*,.*,.*|.*,.*)\\).*";
                 Pattern p = Pattern.compile(regex);
@@ -253,10 +252,9 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
 					for(String var: vars) {
 					  if(!result_strncmp.contains(var)) {
 					      result_strncmp.add(var);
-					      boolean res = checkParentValue(var,str,decompiled);
-					      if(res) {
-					    	  found = true;
-					      }
+
+					      found = true;
+					      logger.info(m.group(0));
 					      
 					  }
 					}
@@ -272,6 +270,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
             if (hfunction == null)
             	return null;
         } catch (NullPointerException e){
+        	logger.info("ERROR@"+ f.getName());
         	return null;
         }
 
@@ -313,11 +312,11 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
                     }
 
                     if(found) {
-        	   	     	//println("VAR:" + var);
+        	   	     	println("VAR:" + var);
         	   	     	logger.info("VAR:" + var);
-        	   	     	//println("STRCMPLINE:" + str);
+        	   	     	println("STRCMPLINE:" + str);
         	   	     	logger.info("STRCMPLINE:" + str);
-        	   	     	//println("ROOTLINE:" + strcmp_line);
+        	   	     	println("ROOTLINE:" + strcmp_line);
         	   	     	logger.info("ROOTLINE:" + strcmp_line);
                         return true;
                     }
@@ -393,7 +392,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
 	    		continue;
 	    	}
 	    	searchedList.put(f.getName(), 1);
-			println("printIncomingCallsInit: " + f.getName() + " @ " + f.getEntryPoint());
+			//println("printIncomingCallsInit: " + f.getName() + " @ " + f.getEntryPoint());
 			decompileFunction2(f, flatApi);
 	    	//decompileFunctionRecursive(f, decomplib);
 	    	// Step C
