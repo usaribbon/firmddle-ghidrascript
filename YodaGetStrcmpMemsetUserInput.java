@@ -87,7 +87,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
         String homepath = "C:/Users/MinamiYoda/Documents/Program/firmware/docker/result/files/"+date.format(formatter_day)+"/";
         String projectName = this.getProgramFile().getName();
         String FirmwareMaker = this.getProgramFile().getPath();
-        FirmwareMaker = FirmwareMaker.substring(40).replace("\\", "_").replace(".bin", "");
+        FirmwareMaker = FirmwareMaker.substring(61).replace("\\", "_").replace(".bin", "");
         File directory = new File(homepath + FirmwareMaker);
         if (!directory.exists()){
             boolean dir_made = directory.mkdirs();
@@ -238,7 +238,6 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
             List<String> result_strncmp_etc = new ArrayList<String>(); //not abobe
             
             
-            logger.info("\n\n\nStart\\n" + f.getName());
             
             boolean found = false;
             String matched = "";
@@ -264,7 +263,7 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
 					      result_strncmp.add(var);
 					      boolean res = checkParentValue(var,str,decompiled);
 					      if(res) {
-					    	  addCondidateCount();
+					    	  found = true;
 					      }
 					      
 					  }
@@ -272,7 +271,10 @@ public class YodaGetStrcmpMemsetUserInput extends GhidraScript {
                 }	
             }
             
-            logger.info("End\n\n\n");
+            if(found) {
+            	addCondidateCount();
+                logger.info("..... " + f.getName() +"\n\n\n");
+            }
         
             
             if (hfunction == null)
