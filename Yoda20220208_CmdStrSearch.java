@@ -7,7 +7,6 @@
 
 import java.io.File;
 import java.io.IOException;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -50,162 +49,143 @@ import ghidra.program.model.lang.*;
 import ghidra.program.model.pcode.*;
 import ghidra.program.model.address.*;
 import ghidra.base.project.*;
+import java.util.regex.*;
+import java.util.logging.FileHandler;
+import java.util.logging.Formatter;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+ 
 
-
-public class YodaHeadlessAnalyzer20210105 extends GhidraScript {
+public class Yoda20220208_CmdStrSearch extends GhidraScript {
 
     private HashMap<String, Integer> searchedList = new HashMap<String, Integer>();
     private int searchedCount = 0;
     private int candidateCount = 0;
-    private int maxDepth = 1;
 	//logger
-    private Logger logger = Logger.getLogger("MyLog");  
-    private FileHandler fh;  
-
+    private Logger logger = Logger.getLogger("MyLog");
+    private FileHandler fh;
+    private FlatDecompilerAPI decompApi;
     
      /**
-     * @throws CancelledException 
-     * @throws DecompileException 
+     * @throws Exception 
      * @see ghidra.app.script.GhidraScript#run()
      */
     @Override
-    public void run() throws CancelledException, DecompileException {
+    public void run() throws Exception {
         monitor.setMessage("Counting symbols...");
 
-        //enableHeadlessAnalysis(true);  // turn on analysis
-        //boolean analysisEnabled = isHeadlessAnalysisEnabled();
         /*DefinedStringIterator definedStringIterator = new DefinedStringIterator(state.getCurrentProgram(), false);
 		while (definedStringIterator.hasNext()) {
 			FoundString string = definedStringIterator.next();
 			Address address = string.getAddress();
 
 		}*/
+
         LocalDateTime date = LocalDateTime.now();
         DateTimeFormatter formatter_day = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         DateTimeFormatter formatter_time = DateTimeFormatter.ofPattern("HH-mm");
-        String homepath = "C:/Users/MinamiYoda/Dropbox/2019/UEC/doc/etc/experiment/"+date.format(formatter_day)+"/";
+        String homepath = "C:/Users/MinamiYoda/Documents/Program/firmware/docker/result/files/Yoda20220208_CmdStrSearch/"+date.format(formatter_day)+"/";
         String projectName = this.getProgramFile().getName();
-        File directory = new File(homepath + projectName);
+        String FirmwareMaker = this.getProgramFile().getPath();
+        FirmwareMaker = FirmwareMaker.substring(61).replace("\\", "_").replace(".bin", "");
+        File directory = new File(homepath + FirmwareMaker);
         if (!directory.exists()){
             boolean dir_made = directory.mkdirs();
             if(dir_made) {
-                println(homepath + projectName);
-            }else {
-            	println("hello");
+                println(directory.toString());
             }
         }
         
+        //reset 
+        searchedList = new HashMap<String, Integer>();
+        searchedCount = 0;
+        candidateCount = 0;
         
-    	for (int depth=0; depth<maxDepth;depth++) {
-    		println("DEPTH " + (depth+1) + " START");
-            //reset 
-            searchedList = new HashMap<String, Integer>();
-            searchedCount = 0;
-            candidateCount = 0;
-            
-    		//logger
-            try {  
+		//logger
+        try {  
 
-                // This block configure the logger with handler and formatter  append true
-                fh = new FileHandler( homepath + projectName + "/" + date.format(formatter_time) + ".log", true);
-                logger.addHandler(fh);
-                SimpleFormatter formatter = new SimpleFormatter();
-                fh.setFormatter(formatter); 
+            // This block configure the logger with handler and formatter  append true
+        	fh = new FileHandler( directory.toString() + "/" + date.format(formatter_time) + "-stringsearch.log", true);
+            logger.addHandler(fh);
+            fh.setFormatter(new MyCustomFormatter()); 
 
-            } catch (SecurityException e) {  
-                e.printStackTrace();  
-            } catch (IOException e) {  
-                e.printStackTrace();  
-            } 
+        } catch (SecurityException e) {  
+            e.printStackTrace();  
+        } catch (IOException e) {  
+            e.printStackTrace();  
+        } 
 
-            //measure running time
-            long runningTimeStart = System.nanoTime();
+        //measure running time
+        long runningTimeStart = System.nanoTime();
+        
+        SymbolTable st = state.getCurrentProgram().getSymbolTable();
+        SymbolIterator iter = st.getSymbolIterator(true);
+        
+        decompApi = setUpDecompiler();
+    	
+        while (iter.hasNext() && !monitor.isCancelled()) {
+            Symbol sym = iter.next();
+            //FoundString foundString = iter.next();
+            //println(sym.getName()); print all symbol
+            //if (sym != null && sym.getName().contains("str")) {
 
-            SymbolTable st = state.getCurrentProgram().getSymbolTable();
-            SymbolIterator iter = st.getSymbolIterator(true);
-	        while (iter.hasNext() && !monitor.isCancelled()) {
-	            Symbol sym = iter.next();
-	            //FoundString foundString = iter.next();
-	            //println(sym.getName()); print all symbol
-	            //if (sym != null && sym.getName().contains("str")) {
-	            if (sym != null && sym.getName().matches("socket")) {
-	                
-	            	Address addr = sym.getAddress();
-	                //println("socket() @ " + addr.toString());
-	            	Listing listing = state.getCurrentProgram().getListing();
-	            	Function func = listing.getFunctionContaining(addr);
-	            	
-	            	
-	            	/*Data d = listing.getDataAt(addr(0x404f10));
-	        		d = listing.getDataAt(addr(0x405d80));
-	        		dt = d.getBaseDataType();
-	        		d.ge*/
-	            	
-	            	if (func == null) {
-	            		//println("No Function at address" + currentAddress);
-	            		continue;
-	            	}
-	            	
-            		Reference refs[] = sym.getReferences(null);
-            		
-            		for(int i=0; i<refs.length;i++) {             			
-            			
-            			if(monitor.isCancelled()) {
-            				break;
-            			}
-            			// Step A
-            			Address refAddr = refs[i].getFromAddress();
-            			Function refFunc = state.getCurrentProgram().getFunctionManager()
-            					.getFunctionContaining(refAddr);
-            			if(refFunc == null) {
-            				continue;
-            			}
-            			
-            			decompileFunction2(refFunc);
-            			
-            			//Step B
-            			/*try {
-            				printOutgoingCalls(refFunc, decomplib, depth);
-            			} catch(NullPointerException e){
-                        	continue;
-                        }*/
-            			
-            			try {
-            				printIncomingCallsInit(refFunc, depth);
-            			} catch(NullPointerException e){
-                        	continue;
-                        }
-            		}
+        	Address addr = sym.getAddress();
+            //println("socket() @ " + addr.toString());
+        	Listing listing = state.getCurrentProgram().getListing();
+        	Function func = listing.getFunctionContaining(addr);
 
-                Function symFunc = getFunctionAt(addr);
-                if(symFunc != null) {
-                	/*
-                	printIncomingCalls(symFunc);
-                	println("\n");
-                	printOutgoingCalls(symFunc);
-                	println("----------------------\n");
-                	//decompileFunction(symFunc);
-                	println("----------------------\n");
-                	*/
-                }   
+     		addSearchedCount();
+
+            if (sym != null && sym.getName().matches("strn?cmp")) {
+        		Reference refs[] = sym.getReferences(null);
+        		
+        		for(int i=0; i<refs.length;i++) {      
+        			if(monitor.isCancelled()) {
+        				break;
+        			}
+        			// Step A
+        			Address refAddr = refs[i].getFromAddress();
+        			Function refFunc = state.getCurrentProgram().getFunctionManager()
+        					.getFunctionContaining(refAddr);
+        			if(refFunc == null) {
+        				continue;
+        			}
+           			
+        			//decompileFunction2(refFunc, decomplib);
+        			
+        			//Step B
+        			/*try {
+        				printOutgoingCalls(refFunc, decomplib, depth);
+        			} catch(NullPointerException e){
+                    	continue;
+                    }*/
+        			
+        			try {
+        				//println(sym.getName());
+        				printIncomingCallsInit(refFunc, decompApi);
+        			} catch(NullPointerException e){
+                    	continue;
+                    }
+        		}
                 
-	            }//end if symbol found         
-	        }// end while     
-            logger.info(getCondidateCount() +" functions were chosen as candidate");
-            logger.info(getSearchedCount() +" functions were searched");
+            }//end if symbol found         
+        }// end while     
+        logger.info(getCondidateCount() +" functions were chosen as candidate");
+        logger.info(getSearchedCount() +" functions were searched");
 
-            //measure running time
-            long runningTimeEnd = System.nanoTime();
-            long timeElapsed = runningTimeEnd - runningTimeStart;
-            //measure 
-            logger.info( "TIME (nsec) : " + timeElapsed  );
-            logger.info( "TIME (msec) : " + timeElapsed / 1000000 );
-            logger.info( "TIME (sec) : " +  TimeUnit.NANOSECONDS.toSeconds(timeElapsed));
+        //measure running time
+        long runningTimeEnd = System.nanoTime();
+        long timeElapsed = runningTimeEnd - runningTimeStart;
+        //measure 
+        logger.info( "TIME (nsec) : " + timeElapsed  );
+        logger.info( "TIME (msec) : " + timeElapsed / 1000000 );
+        logger.info( "TIME (sec) : " +  TimeUnit.NANOSECONDS.toSeconds(timeElapsed));
 
-            //close log
-            logger.removeHandler(fh);
-            fh.close();
-        }//end depth for
+        //close log
+        logger.removeHandler(fh);
+        fh.close();
+        decompApi.dispose();
+
         logger.setUseParentHandlers(false);
 
     }
@@ -221,6 +201,7 @@ public class YodaHeadlessAnalyzer20210105 extends GhidraScript {
     
     private void addCondidateCount() {
     	candidateCount += 1;
+    	//logger.info("candidate"+ candidateCount);
     }
     
     private int getCondidateCount() {
@@ -229,80 +210,111 @@ public class YodaHeadlessAnalyzer20210105 extends GhidraScript {
     
     HighFunction hfunction = null;
     ClangTokenGroup docroot = null;
-    public DecompileResults decompileFunction2(Function f) {
+    public DecompileResults decompileFunction2(Function f, FlatDecompilerAPI flatApi) {
     	// decomplib.setSimplificationStyle("normalize", null);
         // HighFunction hfunction = decomplib.decompileFunction(f);
-    	if (searchedList.containsKey(f.getName())) {
-    		// Skip decompile if it is already searched
-    		//print("Skipped " + f.getName() + "," + searchedList.get(f.getName()) + "\n");
-    		searchedList.put(f.getName(), searchedList.get(f.getName())+1);
-    		return null;
-    	}
-    	addSearchedCount();
-    	searchedList.put(f.getName(), 1);
-
         try {
 
-            Stream<String> resLines = functionDecompile(f).lines();
+            Stream<String> resLines = null;
+			try {
+				resLines = functionDecompile(f, flatApi).lines();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 
-            List<String> result_strncmp = resLines.filter(line -> line.matches(".*strn?cmp.*"))
-            		.collect(Collectors.toList());
+            List<String> decompiled = resLines.collect(Collectors.toList());
+            //variables
+            List<String> result_strncmp = new ArrayList<String>(); //param, stack, data,local
+            List<String> result_strncmp_etc = new ArrayList<String>(); //not abobe
+            
+            
+            
+            boolean found = false;
+            String matched = "";
 
-            if (result_strncmp.size() > 0) {
-            	logger.info("Function Name : " + f.getName());
-            	result_strncmp.forEach(r -> logger.info(r.toString()));
-            	addCondidateCount();
+            //strcmp("password", Stack) どちらかが埋め込み文字列であること["'].*["'] -> ("password", hogehoge) や(hogehoge,'password')をさがす
+            for(String str: decompiled) {
+            	//mac: デコンパイル結果に埋め込み文字列がでてくるが，winはPTR__で表示されるので注意
+            	if(str.contains("str")) {
+            		//debug
+            		//println("ORG:"+str);
+            		//logger.info("ORG:"+str);
+            	}
+                String regex = ".*str.*cmp(.*\".*\".*).*";
+                Pattern p = Pattern.compile(regex);
+                Matcher m = p.matcher(str);
+                if (m.find()){
+					//logger.info(str);
+					String matchstr = m.group();
+					//m.group(1)はｓｔｒｃｍｐの引数が表示される，0は全文
+					String[] vars = m.group(1).split(",");
+					for(String var: vars) {
+					  if(!result_strncmp.contains(var)) {
+					      result_strncmp.add(var);
+
+					      found = true;
+					      logger.info(m.group(0));
+					      println(m.group(0));
+					      
+					  }
+					}
+                }	
             }
-
+            
+            if(found) {
+            	addCondidateCount();
+                logger.info("..... " + f.getName() +"\n\n\n");
+            }
+        
             
             if (hfunction == null)
             	return null;
-            	
-        } catch (Exception e){
-        	println("error at 265" + e);
+        } catch (NullPointerException e){
+        	logger.info("ERROR@"+ f.getName());
         	return null;
         }
 
         return null;
     }
-        
-	private String functionDecompile(Function function) throws Exception {
-		FlatDecompilerAPI decompApi = new FlatDecompilerAPI(this);
+
+	
+    private String getVariableAndContent(String line,boolean content) {
+    	String left = line.replaceAll(" = .*", ""); 
+    	String right = line.replaceAll(".* = |;|\\*|\\+|\\)|\\(", ""); 
+
+    	if(content) {
+    		return right;
+    	}else {
+    		return left;
+    	}
+    }
+
+
+	private FlatDecompilerAPI setUpDecompiler() throws Exception {
+		decompApi = new FlatDecompilerAPI(this);
 		if(decompApi.getDecompiler() == null) {
 			decompApi.initialize();
 		}
-		
-		return decompApi.decompile(function);
-	}
+		DecompInterface decomplib = decompApi.getDecompiler();
 
-    
-	private DecompInterface setUpDecompiler(Program program) {
-		FlatDecompilerAPI decompApi = new FlatDecompilerAPI(this);
-		DecompInterface decomplib = new DecompInterface();
-        
 		DecompileOptions options;
 		options = new DecompileOptions(); 
-		OptionsService service = state.getTool().getService(OptionsService.class);
-		if (service != null) {
-			ToolOptions opt = service.getOptions("Decompiler");
-			options.grabFromToolAndProgram(null,opt,program);    	
-		}
         decomplib.setOptions(options);
         
 		decomplib.toggleCCode(true);
 		decomplib.toggleSyntaxTree(true);
 		decomplib.setSimplificationStyle("decompile");
 		
-		return decomplib;
+		return decompApi;
+	}
+	
+	private String functionDecompile(Function function, FlatDecompilerAPI flatApi) throws Exception {		
+		return flatApi.decompile(function);
 	}
 
 
-	private boolean printIncomingCallsInit(Function function, int depth) throws CancelledException, NullPointerException, DecompileException {
-		//println("DEPTH: " + depth);
-		if (depth == 0) {
-			return false;
-		}
-		depth -= 1;
+	private boolean printIncomingCallsInit(Function function, FlatDecompilerAPI flatApi) throws CancelledException, NullPointerException, DecompileException {
 		Address functionAddress = function.getEntryPoint();
 		FunctionSignatureFieldLocation location =
 			new FunctionSignatureFieldLocation(function.getProgram(), functionAddress);
@@ -321,23 +333,27 @@ public class YodaHeadlessAnalyzer20210105 extends GhidraScript {
 		Collections.sort(list, (f1, f2) -> f1.getEntryPoint().compareTo(f2.getEntryPoint()));
 
 		for (Function f : list) {
-			//println("Incoming Function Call: " + f.getName() + " @ " + f.getEntryPoint());
-	    	decompileFunction2(f);
-	    	// Step C
-	    	//printIncomingCalls(f, decomplib, depth);
-//
-	    	// Step C
-	    	printOutgoingCalls(f, depth);
+			
+			//don't start function search if it's already searched as start point
+	    	if (searchedList.get(f.getName()) != null) {
+	    		// Skip decompile if it is already searched
+	    		//print("Skipped " + f.getName() + "," + searchedList.get(f.getName()) + "\n");
+	    		searchedList.put(f.getName(), searchedList.get(f.getName())+1);
+	    		continue;
+	    	}
+	    	searchedList.put(f.getName(), 1);
+			//println("printIncomingCallsInit: " + f.getName() + " @ " + f.getEntryPoint());
+			decompileFunction2(f, flatApi);
 		}
 		return true;
 	}
 	
-	private boolean printIncomingCalls(Function function, int depth) throws CancelledException, NullPointerException, DecompileException {
-		//println("DEPTH: " + depth);
-		if (depth == 0) {
+	private boolean printIncomingCalls(Function function,  String childFunctionName, int paramN, FlatDecompilerAPI flatApi, int depth) throws CancelledException, NullPointerException, DecompileException {
+		if(depth == 0) {
 			return false;
 		}
-		depth -= 1;
+		depth-=1;
+
 		Address functionAddress = function.getEntryPoint();
 		FunctionSignatureFieldLocation location =
 			new FunctionSignatureFieldLocation(function.getProgram(), functionAddress);
@@ -356,10 +372,10 @@ public class YodaHeadlessAnalyzer20210105 extends GhidraScript {
 		Collections.sort(list, (f1, f2) -> f1.getEntryPoint().compareTo(f2.getEntryPoint()));
 
 		for (Function f : list) {
-			//println("Incoming Function Call: " + f.getName() + " @ " + f.getEntryPoint());
-	    	decompileFunction2(f);
+			println("Incoming Function Call: " + f.getName() + " @ " + f.getEntryPoint());
+			//decompileFunctionRecursive(f, childFunctionName, paramN, flatApi, depth);
 	    	// Step C
-	    	//printIncomingCalls(f, decomplib, depth);
+	    	//printIncomingCalls(f, decomplib, "now", 2);
 //
 	    	// Step C
 	    	//printOutgoingCalls(f, decomplib, depth);
@@ -367,12 +383,7 @@ public class YodaHeadlessAnalyzer20210105 extends GhidraScript {
 		return true;
 	}
 
-	private boolean printOutgoingCalls(Function function, int depth) throws NullPointerException, DecompileException {
-		//println("DEPTH: " + depth);
-		if (depth == 0) {
-			return false;
-		}
-		depth -= 1;
+	private boolean printOutgoingCalls(Function function, DecompInterface decomplib, String childFunctionName) throws NullPointerException, DecompileException {
 		AddressSetView functionBody = function.getBody();
 		Set<Reference> references = getReferencesFrom(currentProgram, functionBody);
 		Set<Function> outgoingFunctions = new HashSet<>();
@@ -388,17 +399,7 @@ public class YodaHeadlessAnalyzer20210105 extends GhidraScript {
 		Collections.sort(list, (f1, f2) -> f1.getEntryPoint().compareTo(f2.getEntryPoint()));
 
 		for (Function f : list) {
-			//println("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
-	    	decompileFunction2(f);
-	    	// Step C
-	    	printOutgoingCalls(f, depth);
-
-	    	try {
-				printIncomingCalls(f, depth);
-			} catch (CancelledException e) {
-				continue;
-			}
-
+	    	//decompileFunctionRecurisive(f, decomplib, childFunctionName);
 		}
 		return true;
 	}
@@ -462,4 +463,15 @@ public class YodaHeadlessAnalyzer20210105 extends GhidraScript {
 					getCurrentProgram().getMemory()).getStringRepresentation()
 				: "";
 	}
+
+	private static class MyCustomFormatter extends Formatter {
+        @Override
+        public String format(LogRecord record) {
+            StringBuffer sb = new StringBuffer();
+            sb.append(record.getMessage());
+            sb.append("\n");
+            return sb.toString();
+        }
+         
+    }
 }
