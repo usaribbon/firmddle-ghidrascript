@@ -1,3 +1,4 @@
+package yoda.ghidra.api;
 //TODO write a description for this script
 //@author 
 //@category _NEW_
@@ -35,6 +36,7 @@ import ghidra.app.decompiler.DecompileOptions;
 import ghidra.app.decompiler.DecompileResults;
 import ghidra.app.plugin.core.navigation.locationreferences.ReferenceUtils;
 import ghidra.app.script.GhidraScript;
+import ghidra.app.script.GhidraState;
 import ghidra.docking.settings.Settings;
 import ghidra.framework.options.ToolOptions;
 import ghidra.framework.plugintool.ServiceProvider;
@@ -43,6 +45,7 @@ import ghidra.program.model.util.*;
 import ghidra.program.util.FunctionSignatureFieldLocation;
 import ghidra.program.util.string.FoundString;
 import ghidra.util.exception.CancelledException;
+import ghidra.util.task.TaskMonitor;
 import ghidra.program.model.reloc.*;
 import ghidra.program.model.data.*;
 import ghidra.program.model.block.*;
@@ -56,17 +59,19 @@ import ghidra.program.model.address.*;
 import ghidra.base.project.*;
 
 
-public class YodaPrintfScanfSearchStr202200215 extends GhidraScript {
+public class ScanfStrcmp extends GhidraScript {
 
 
     private HashMap<String, Integer> searchedList = new HashMap<String, Integer>();
     private int searchedCount = 0;
     private int candidateCount = 0;
     private FlatDecompilerAPI decompApi;
-    private int maxDepth = 20;
+    private int maxDepth = 3;
 	//logger
     private Logger logger = Logger.getLogger("MyLog");  
     private FileHandler fh;  
+    private TaskMonitor monitor;
+    private GhidraState state;
 
     
      /**
@@ -74,12 +79,13 @@ public class YodaPrintfScanfSearchStr202200215 extends GhidraScript {
      * @throws DecompileException 
      * @see ghidra.app.script.GhidraScript#run()
      */
-    @Override
-    public void run() throws CancelledException, DecompileException {
+    public void getVals(FlatDecompilerAPI api, GhidraState s, TaskMonitor m, Program c) throws Exception {
+		decompApi = api;
+		state = s;
+		monitor = m;
+		currentProgram = c;
         monitor.setMessage("Counting symbols...");
 
-        //ICCE-TW2022
-        
         //enableHeadlessAnalysis(true);  // turn on analysis
         //boolean analysisEnabled = isHeadlessAnalysisEnabled();
         /*DefinedStringIterator definedStringIterator = new DefinedStringIterator(state.getCurrentProgram(), false);
@@ -93,18 +99,14 @@ public class YodaPrintfScanfSearchStr202200215 extends GhidraScript {
         DateTimeFormatter formatter_day = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         DateTimeFormatter formatter_time = DateTimeFormatter.ofPattern("HH-mm");
         String homepath = "C:/Users/MinamiYoda/Documents/Program/firmware/docker/result/files/YodaPrintfScanfSearch202200215/"+date.format(formatter_day)+"/";
-
-        String FirmwareMaker = currentProgram.getExecutablePath();
-        if(FirmwareMaker.length() > 80) {
-            FirmwareMaker = FirmwareMaker.substring(61).replace("\\", "_").replace(":", "").replace("/", "_").replace(".bin", "");
-        }else {
-            FirmwareMaker = FirmwareMaker.replace("\\", "_").replace(":", "").replace("/", "_").replace(".bin", "");
-        }
+        String projectName = this.getProgramFile().getName();
+        String FirmwareMaker = this.getProgramFile().getPath();
+        FirmwareMaker = FirmwareMaker.substring(61).replace("\\", "_").replace(".bin", "");
         File directory = new File(homepath + FirmwareMaker);
         if (!directory.exists()){
             boolean dir_made = directory.mkdirs();
             if(dir_made) {
-                println(directory.toString());
+                //println(directory.toString());
             }
         }
         
@@ -118,7 +120,7 @@ public class YodaPrintfScanfSearchStr202200215 extends GhidraScript {
         try {  
 
             // This block configure the logger with handler and formatter  append true
-        	fh = new FileHandler( directory.toString() + "/" + date.format(formatter_time) + "-iccetw2022.log", true);
+        	fh = new FileHandler( directory.toString() + "/" + date.format(formatter_time) + "-stringsearch.log", true);
             logger.addHandler(fh);
             fh.setFormatter(new MyCustomFormatter()); 
 
@@ -177,7 +179,7 @@ public class YodaPrintfScanfSearchStr202200215 extends GhidraScript {
                     }*/
         			
         			try {
-        				println("DEPTH Start: " + maxDepth + ", Function: "+ refFunc.getName());
+        				//println("DEPTH Start: " + maxDepth + ", Function: "+ refFunc.getName());
         				logger.info("DEPTH Start: " + maxDepth + ", Function: "+ refFunc.getName());
         				printIncomingCallsInit(refFunc, maxDepth, decompApi);
         			} catch(NullPointerException e){
@@ -204,7 +206,7 @@ public class YodaPrintfScanfSearchStr202200215 extends GhidraScript {
         fh.close();
         logger.setUseParentHandlers(false);
         if(getCondidateCount() == 0) {
-        	File logFilePathObj = new File(directory.toString() + "/" + date.format(formatter_time) + "-iccetw2022.log");
+        	File logFilePathObj = new File( directory.toString() + "/" + date.format(formatter_time) + "-stringsearch.log");
             logFilePathObj.delete();
             directory.delete();
         }
@@ -254,13 +256,15 @@ public class YodaPrintfScanfSearchStr202200215 extends GhidraScript {
 
              //strcmp("password", Stack) どちらかが埋め込み文字列であること["'].*["'] -> ("password", hogehoge) や(hogehoge,'password')をさがす
              for(String str: decompiled) {
-            	 if(str.contains("str")) {
+				     //println("matched:"+str);
+	             		logger.info(str);
+             	//mac: デコンパイル結果に埋め込み文字列がでてくるが，winはPTR__で表示されるので注意
+             	if(str.contains("str")) {
              		//debug
-             		println("ORG:"+str);
-             		logger.info(str);
-                    addCondidateCount();
+             		//println("matched:"+str);
+             		//logger.info(str);
              	}
-            	 /*
+             	
                  String regex = ".*strn?cmp\\((.*,.*,.*|.*,.*)\\).*";
                  Pattern p = Pattern.compile(regex);
                  Matcher m = p.matcher(str);
@@ -280,7 +284,7 @@ public class YodaPrintfScanfSearchStr202200215 extends GhidraScript {
  	             		//logger.info(var);
  					  }
  					}
-                 }*/
+                 }
              }
              
              if(found) {
@@ -344,7 +348,7 @@ public class YodaPrintfScanfSearchStr202200215 extends GhidraScript {
 
 	private boolean printIncomingCallsInit(Function function, int depth, FlatDecompilerAPI flatApi) throws CancelledException, NullPointerException, DecompileException {
 		
-		println("DEPTH Main: " + depth + ", Function: "+function.getName());
+		//println("DEPTH Main: " + depth + ", Function: "+function.getName());
 		logger.info("DEPTH Main: " + depth + ", Function: "+function.getName());
 		Address functionAddress = function.getEntryPoint();
 		FunctionSignatureFieldLocation location =
@@ -382,45 +386,8 @@ public class YodaPrintfScanfSearchStr202200215 extends GhidraScript {
 		return true;
 	}
 	
-
-	private boolean printIncomingCalls(Function function,  String childFunctionName, int paramN, FlatDecompilerAPI flatApi, int depth) throws CancelledException, NullPointerException, DecompileException {
-		if(depth == 0) {
-			return false;
-		}
-		depth-=1;
-
-		Address functionAddress = function.getEntryPoint();
-		FunctionSignatureFieldLocation location =
-			new FunctionSignatureFieldLocation(function.getProgram(), functionAddress);
-		Set<Address> addresses = ReferenceUtils.getReferenceAddresses(location, monitor);
-		FunctionManager functionManager = currentProgram.getFunctionManager();
-		Set<Function> callingFunctions = new HashSet<>();
-		for (Address fromAddress : addresses) {
-			Function callerFunction = functionManager.getFunctionContaining(fromAddress);
-			if (callerFunction != null) {
-				callingFunctions.add(callerFunction);
-			}
-		}
-
-		// sort them by address
-		List<Function> list = new ArrayList<>(callingFunctions);
-		Collections.sort(list, (f1, f2) -> f1.getEntryPoint().compareTo(f2.getEntryPoint()));
-
-		for (Function f : list) {
-			println("Incoming Function Call: " + f.getName() + " @ " + f.getEntryPoint());
-			//decompileFunctionRecursive(f, childFunctionName, paramN, flatApi, depth);
-	    	// Step C
-	    	//printIncomingCalls(f, decomplib, "now", 2);
-//
-	    	// Step C
-	    	//printOutgoingCalls(f, decomplib, depth);
-		}
-		return true;
-	}
-
-	
 	private boolean printOutgoingCalls(Function function, int depth, FlatDecompilerAPI flatApi) throws NullPointerException, DecompileException {
-		println("DEPTH child: " + depth + ", Function: "+function.getName());
+		//println("DEPTH child: " + depth + ", Function: "+function.getName());
 		logger.info("DEPTH child: " + depth + ", Function: "+function.getName());
 		if (depth == 0) {
 			System.exit(0);
@@ -441,7 +408,7 @@ public class YodaPrintfScanfSearchStr202200215 extends GhidraScript {
 		Collections.sort(list, (f1, f2) -> f1.getEntryPoint().compareTo(f2.getEntryPoint()));
 
 		for (Function f : list) {
-			println("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
+			//println("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
 			logger.info("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
 			decompileFunction2(f, flatApi);
 	    	// Step C
@@ -529,4 +496,10 @@ public class YodaPrintfScanfSearchStr202200215 extends GhidraScript {
         }
          
     }
+
+	@Override
+	protected void run() throws Exception {
+		// TODO Auto-generated method stub
+		
+	}
 }
