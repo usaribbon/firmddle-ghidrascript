@@ -68,20 +68,24 @@ public class MemsetUserInputString extends GhidraScript {
     private Logger logger = Logger.getLogger("MyLog");
     private FileHandler fh;
     private FlatDecompilerAPI decompApi;
-    private TaskMonitor monitor;
-    private GhidraState state;
+    private HashMap<String, String> result = new HashMap<>();
     
      /**
+     * @return 
      * @throws Exception 
      * @see ghidra.app.script.GhidraScript#run()
      */
-    public void getVals(FlatDecompilerAPI api, GhidraState s, TaskMonitor m, Program c) throws Exception {
+    public HashMap<String, String> getVals(FlatDecompilerAPI api, GhidraState s, TaskMonitor m, Program c) throws Exception {
 		decompApi = api;
 		state = s;
 		monitor = m;
 		currentProgram = c;
-        monitor.setMessage("Counting symbols...");
 
+        //reset 
+        searchedList = new HashMap<String, Integer>();
+        searchedCount = 0;
+        candidateCount = 0;
+        
         /*DefinedStringIterator definedStringIterator = new DefinedStringIterator(state.getCurrentProgram(), false);
 		while (definedStringIterator.hasNext()) {
 			FoundString string = definedStringIterator.next();
@@ -89,13 +93,19 @@ public class MemsetUserInputString extends GhidraScript {
 
 		}*/
 
+	    /* FILE LOGGER */
+	    /*
         LocalDateTime date = LocalDateTime.now();
         DateTimeFormatter formatter_day = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         DateTimeFormatter formatter_time = DateTimeFormatter.ofPattern("HH-mm");
         String homepath = "C:/Users/MinamiYoda/Documents/Program/firmware/docker/result/files/"+date.format(formatter_day)+"/";
-        String projectName = this.getProgramFile().getName();
-        String FirmwareMaker = this.getProgramFile().getPath();
-        FirmwareMaker = FirmwareMaker.substring(61).replace("\\", "_").replace(".bin", "");
+
+        String FirmwareMaker = currentProgram.getExecutablePath();
+        if(FirmwareMaker.length() > 80) {
+            FirmwareMaker = FirmwareMaker.substring(61).replace("\\", "_").replace(":", "").replace("/", "_").replace(".bin", "");
+        }else {
+            FirmwareMaker = FirmwareMaker.replace("\\", "_").replace(":", "").replace("/", "_").replace(".bin", "");
+        }
         File directory = new File(homepath + FirmwareMaker);
         if (!directory.exists()){
             boolean dir_made = directory.mkdirs();
@@ -104,16 +114,11 @@ public class MemsetUserInputString extends GhidraScript {
             }
         }
         
-        //reset 
-        searchedList = new HashMap<String, Integer>();
-        searchedCount = 0;
-        candidateCount = 0;
-        
 		//logger
         try {  
 
             // This block configure the logger with handler and formatter  append true
-        	fh = new FileHandler( directory.toString() + "/" + date.format(formatter_time) + "-stringsearch.log", true);
+        	fh = new FileHandler( directory.toString() + "/" + date.format(formatter_time) + ".log", true);
             logger.addHandler(fh);
             fh.setFormatter(new MyCustomFormatter()); 
 
@@ -123,6 +128,7 @@ public class MemsetUserInputString extends GhidraScript {
             e.printStackTrace();  
         } 
 
+        */
         //measure running time
         long runningTimeStart = System.nanoTime();
         
@@ -147,7 +153,8 @@ public class MemsetUserInputString extends GhidraScript {
             if (sym != null && sym.getName().matches("strn?cmp")) {
         		Reference refs[] = sym.getReferences(null);
         		
-        		for(int i=0; i<refs.length;i++) {      
+        		for(int i=0; i<refs.length;i++) {             			
+        			
         			if(monitor.isCancelled()) {
         				break;
         			}
@@ -158,7 +165,7 @@ public class MemsetUserInputString extends GhidraScript {
         			if(refFunc == null) {
         				continue;
         			}
-           			
+        			
         			//decompileFunction2(refFunc, decomplib);
         			
         			//Step B
@@ -177,7 +184,11 @@ public class MemsetUserInputString extends GhidraScript {
         		}
                 
             }//end if symbol found         
-        }// end while     
+        }// end while  
+		return result;
+        
+        /* FILE LOGGER*/
+        /*    
         logger.info(getCondidateCount() +" functions were chosen as candidate");
         logger.info(getSearchedCount() +" functions were searched");
 
@@ -195,7 +206,7 @@ public class MemsetUserInputString extends GhidraScript {
         decompApi.dispose();
 
         logger.setUseParentHandlers(false);
-
+        */
     }
 
     
@@ -235,9 +246,7 @@ public class MemsetUserInputString extends GhidraScript {
             //variables
             List<String> result_strncmp = new ArrayList<String>(); //param, stack, data,local
             List<String> result_strncmp_etc = new ArrayList<String>(); //not abobe
-            
-            
-            
+          
             boolean found = false;
             String matched = "";
 
@@ -247,7 +256,7 @@ public class MemsetUserInputString extends GhidraScript {
             	if(str.contains("str")) {
             		//debug
             		//println("ORG:"+str);
-            		//logger.info("ORG:"str);
+            		//logger.info(str);
             	}
                 String regex = ".*strn?cmp\\((.*,.*,.*|.*,.*)\\).*";
                 Pattern p = Pattern.compile(regex);
@@ -260,9 +269,10 @@ public class MemsetUserInputString extends GhidraScript {
 					for(String var: vars) {
 					  if(!result_strncmp.contains(var)) {
 					      result_strncmp.add(var);
-
-					      found = true;
-					      logger.info(m.group(0));
+					      boolean res = checkParentValue(var,str,decompiled,f.getName());
+					      if(res) {
+					    	  found = true;
+					      }
 					      
 					  }
 					}
@@ -271,14 +281,13 @@ public class MemsetUserInputString extends GhidraScript {
             
             if(found) {
             	addCondidateCount();
-                logger.info("..... " + f.getName() +"\n\n\n");
+                //logger.info("..... " + f.getName() +"\n\n\n");
             }
         
             
             if (hfunction == null)
             	return null;
         } catch (NullPointerException e){
-        	logger.info("ERROR@"+ f.getName());
         	return null;
         }
 
@@ -286,7 +295,7 @@ public class MemsetUserInputString extends GhidraScript {
     }
 
 	
-	private boolean checkParentValue(String var, String str, List<String> decompiled) {
+	private boolean checkParentValue(String var, String str, List<String> decompiled, String functionName) {
 
 		for(String line :decompiled) {
 			String right  = "";
@@ -321,16 +330,17 @@ public class MemsetUserInputString extends GhidraScript {
 
                     if(found) {
         	   	     	//println("VAR:" + var);
-        	   	     	logger.info("VAR:" + var);
+        	   	     	//logger.info("VAR:" + var);
         	   	     	//println("STRCMPLINE:" + str);
-        	   	     	logger.info("STRCMPLINE:" + str);
+        	   	     	//logger.info("STRCMPLINE:" + str);
         	   	     	//println("ROOTLINE:" + strcmp_line);
-        	   	     	logger.info("ROOTLINE:" + strcmp_line);
+        	   	     	//logger.info("ROOTLINE:" + strcmp_line);
+                    	result.put(functionName,str);
                         return true;
                     }
     	     	}    			
     		}catch (Exception e) {
-    			logger.info("error happened to reach root");
+    			//logger.info("error happened to reach root");
 	     		return false;
 	     	}
         }

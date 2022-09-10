@@ -8,7 +8,6 @@ package yoda.ghidra.api;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -19,12 +18,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.FileHandler;
-import java.util.logging.Formatter;
-import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -57,38 +52,35 @@ import ghidra.program.model.lang.*;
 import ghidra.program.model.pcode.*;
 import ghidra.program.model.address.*;
 import ghidra.base.project.*;
+import java.util.regex.*;
+import java.util.logging.FileHandler;
+import java.util.logging.Formatter;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+ 
 
-
-public class ScanfStrcmp extends GhidraScript {
-
+public class StringSearch extends GhidraScript {
 
     private HashMap<String, Integer> searchedList = new HashMap<String, Integer>();
     private int searchedCount = 0;
     private int candidateCount = 0;
-    private FlatDecompilerAPI decompApi;
-    private int maxDepth = 3;
 	//logger
-    private Logger logger = Logger.getLogger("MyLog");  
-    private FileHandler fh;  
-    private TaskMonitor monitor;
-    private GhidraState state;
+    private Logger logger = Logger.getLogger("MyLog");
+    private FileHandler fh;
+    private FlatDecompilerAPI decompApi;
     private HashMap<String, String> result = new HashMap<>();
-
     
      /**
-     * @throws CancelledException 
-     * @throws DecompileException 
+     * @throws Exception 
      * @see ghidra.app.script.GhidraScript#run()
      */
-    public void getVals(FlatDecompilerAPI api, GhidraState s, TaskMonitor m, Program c) throws Exception {
+    public HashMap<String,String> getVals(FlatDecompilerAPI api, GhidraState s, TaskMonitor m, Program c) throws Exception {
 		decompApi = api;
 		state = s;
 		monitor = m;
 		currentProgram = c;
         monitor.setMessage("Counting symbols...");
 
-        //enableHeadlessAnalysis(true);  // turn on analysis
-        //boolean analysisEnabled = isHeadlessAnalysisEnabled();
         /*DefinedStringIterator definedStringIterator = new DefinedStringIterator(state.getCurrentProgram(), false);
 		while (definedStringIterator.hasNext()) {
 			FoundString string = definedStringIterator.next();
@@ -96,10 +88,12 @@ public class ScanfStrcmp extends GhidraScript {
 
 		}*/
 
+	    /* FILE LOGGER */
+	    /*
         LocalDateTime date = LocalDateTime.now();
         DateTimeFormatter formatter_day = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         DateTimeFormatter formatter_time = DateTimeFormatter.ofPattern("HH-mm");
-        String homepath = "C:/Users/MinamiYoda/Documents/Program/firmware/docker/result/files/YodaPrintfScanfSearch202200215/"+date.format(formatter_day)+"/";
+        String homepath = "C:/Users/MinamiYoda/Documents/Program/firmware/docker/result/files/"+date.format(formatter_day)+"/";
 
         String FirmwareMaker = currentProgram.getExecutablePath();
         if(FirmwareMaker.length() > 80) {
@@ -114,7 +108,6 @@ public class ScanfStrcmp extends GhidraScript {
                 //println(directory.toString());
             }
         }
-        
         
         //reset 
         searchedList = new HashMap<String, Integer>();
@@ -135,33 +128,32 @@ public class ScanfStrcmp extends GhidraScript {
             e.printStackTrace();  
         } 
 
+        */
         //measure running time
         long runningTimeStart = System.nanoTime();
-
+        
         SymbolTable st = state.getCurrentProgram().getSymbolTable();
         SymbolIterator iter = st.getSymbolIterator(true);
-
-        try {
-			decompApi = setUpDecompiler();
-		} catch (Exception e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-    	
         
+        decompApi = setUpDecompiler();
+    	
         while (iter.hasNext() && !monitor.isCancelled()) {
             Symbol sym = iter.next();
+            //FoundString foundString = iter.next();
+            //println(sym.getName()); print all symbol
+            //if (sym != null && sym.getName().contains("str")) {
+
         	Address addr = sym.getAddress();
+            //println("socket() @ " + addr.toString());
         	Listing listing = state.getCurrentProgram().getListing();
         	Function func = listing.getFunctionContaining(addr);
 
      		addSearchedCount();
 
-            if (sym != null && (sym.getName().matches("sscanf") ||sym.getName().matches("scanf"))) {//sym.getName().matches("printf") || 
-                           	
+            if (sym != null && sym.getName().matches("strn?cmp")) {
         		Reference refs[] = sym.getReferences(null);
         		
-        		for(int i=0; i<refs.length;i++) {             			
+        		for(int i=0; i<refs.length;i++) {      
         			if(monitor.isCancelled()) {
         				break;
         			}
@@ -169,12 +161,11 @@ public class ScanfStrcmp extends GhidraScript {
         			Address refAddr = refs[i].getFromAddress();
         			Function refFunc = state.getCurrentProgram().getFunctionManager()
         					.getFunctionContaining(refAddr);
-
         			if(refFunc == null) {
         				continue;
         			}
-        			
-        			//decompileFunction2(refFunc);
+           			
+        			//decompileFunction2(refFunc, decomplib);
         			
         			//Step B
         			/*try {
@@ -184,17 +175,19 @@ public class ScanfStrcmp extends GhidraScript {
                     }*/
         			
         			try {
-        				//println("DEPTH Start: " + maxDepth + ", Function: "+ refFunc.getName());
-        				logger.info("DEPTH Start: " + maxDepth + ", Function: "+ refFunc.getName());
-        				printIncomingCallsInit(refFunc, maxDepth, decompApi);
+        				//println(sym.getName());
+        				printIncomingCallsInit(refFunc, decompApi);
         			} catch(NullPointerException e){
                     	continue;
                     }
         		}
-
-            
+                
             }//end if symbol found         
-        }// end while     
+        }// end while    
+        return result;
+        
+        /* FILE LOGGER*/
+        /*    
         logger.info(getCondidateCount() +" functions were chosen as candidate");
         logger.info(getSearchedCount() +" functions were searched");
 
@@ -209,13 +202,10 @@ public class ScanfStrcmp extends GhidraScript {
         //close log
         logger.removeHandler(fh);
         fh.close();
-        logger.setUseParentHandlers(false);
-        if(getCondidateCount() == 0) {
-        	File logFilePathObj = new File( directory.toString() + "/" + date.format(formatter_time) + "-stringsearch.log");
-            logFilePathObj.delete();
-            directory.delete();
-        }
+        decompApi.dispose();
 
+        logger.setUseParentHandlers(false);
+        */
 
     }
 
@@ -230,6 +220,7 @@ public class ScanfStrcmp extends GhidraScript {
     
     private void addCondidateCount() {
     	candidateCount += 1;
+    	//logger.info("candidate"+ candidateCount);
     }
     
     private int getCondidateCount() {
@@ -239,73 +230,75 @@ public class ScanfStrcmp extends GhidraScript {
     HighFunction hfunction = null;
     ClangTokenGroup docroot = null;
     public DecompileResults decompileFunction2(Function f, FlatDecompilerAPI flatApi) {
-    	 try {
+    	// decomplib.setSimplificationStyle("normalize", null);
+        // HighFunction hfunction = decomplib.decompileFunction(f);
+        try {
 
-             Stream<String> resLines = null;
- 			try {
- 				resLines = functionDecompile(f, flatApi).lines();
- 			} catch (Exception e) {
- 				// TODO Auto-generated catch block
- 				e.printStackTrace();
- 			}
+            Stream<String> resLines = null;
+			try {
+				resLines = functionDecompile(f, flatApi).lines();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 
-             List<String> decompiled = resLines.collect(Collectors.toList());
-             //variables
-             List<String> result_strncmp = new ArrayList<String>(); //param, stack, data,local
-             List<String> result_strncmp_etc = new ArrayList<String>(); //not abobe
-             
-             
-             
-             boolean found = false;
-             String matched = "";
+            List<String> decompiled = resLines.collect(Collectors.toList());
+            //variables
+            List<String> result_strncmp = new ArrayList<String>(); //param, stack, data,local
+            List<String> result_strncmp_etc = new ArrayList<String>(); //not abobe
+            
+            
+            
+            boolean found = false;
+            String matched = "";
 
-             //strcmp("password", Stack) どちらかが埋め込み文字列であること["'].*["'] -> ("password", hogehoge) や(hogehoge,'password')をさがす
-             for(String str: decompiled) {
-				     //println("matched:"+str);
-	             		logger.info(str);
-             	//mac: デコンパイル結果に埋め込み文字列がでてくるが，winはPTR__で表示されるので注意
-             	if(str.contains("str")) {
-             		//debug
-             		//println("matched:"+str);
-             		//logger.info(str);
-             	}
-             	
-                 String regex = ".*strn?cmp\\((.*,.*,.*|.*,.*)\\).*";
-                 Pattern p = Pattern.compile(regex);
-                 Matcher m = p.matcher(str);
-                 if (m.find()){
- 					//logger.info(str);
- 					String matchstr = m.group();
- 					//m.group(1)はｓｔｒｃｍｐの引数が表示される，0は全文
- 					String[] vars = m.group(1).split(",");
- 					for(String var: vars) {
- 					  if(!result_strncmp.contains(var)) {
- 					      result_strncmp.add(var);
- 					      //boolean res = checkParentValue(var,str,decompiled);
- 					      //if(res) {
- 					    //	  found = true;
- 					      //}
- 					     //println("matched:"+var);
- 	             		//logger.info(var);
- 					  }
- 					}
-                 }
-             }
-             
-             if(found) {
-             	addCondidateCount();
-                 logger.info("..... " + f.getName() +"\n\n\n");
-             }
-         
-             
-             if (hfunction == null)
-             	return null;
-         } catch (NullPointerException e){
-         	return null;
-         }
+            //strcmp("password", Stack) どちらかが埋め込み文字列であること["'].*["'] -> ("password", hogehoge) や(hogehoge,'password')をさがす
+            for(String str: decompiled) {
+            	//mac: デコンパイル結果に埋め込み文字列がでてくるが，winはPTR__で表示されるので注意
+            	if(str.contains("str")) {
+            		//debug
+            		//println("ORG:"+str);
+            		//logger.info("ORG:"str);
+            	}
+                String regex = ".*strn?cmp\\((.*,.*,.*|.*,.*)\\).*";
+                Pattern p = Pattern.compile(regex);
+                Matcher m = p.matcher(str);
+                if (m.find()){
+					//logger.info(str);
+					String matchstr = m.group();
+				    result.put(f.getName(), str);
+					//m.group(1)はｓｔｒｃｍｐの引数が表示される，0は全文
+					String[] vars = m.group(1).split(",");
+					for(String var: vars) {
+					  if(!result_strncmp.contains(var)) {
+					      result_strncmp.add(var);
 
-         return null;
+					      found = true;
+					      //logger.info(m.group(0));
+					      //result.put(f.getName(), str);
+					      
+					  }
+					}
+                }	
+            }
+            
+            if(found) {
+            	addCondidateCount();
+                //logger.info("..... " + f.getName() +"\n\n\n");
+            }
+        
+            
+            if (hfunction == null)
+            	return null;
+        } catch (NullPointerException e){
+        	logger.info("ERROR@"+ f.getName());
+        	return null;
+        }
+
+        return null;
     }
+
+
 
 	private FlatDecompilerAPI setUpDecompiler() throws Exception {
 		decompApi = new FlatDecompilerAPI(this);
@@ -324,37 +317,13 @@ public class ScanfStrcmp extends GhidraScript {
 		
 		return decompApi;
 	}
-    
+	
 	private String functionDecompile(Function function, FlatDecompilerAPI flatApi) throws Exception {		
 		return flatApi.decompile(function);
 	}
 
-    
-	private DecompInterface setUpDecompiler(Program program) {
-		FlatDecompilerAPI decompApi = new FlatDecompilerAPI(this);
-		DecompInterface decomplib = new DecompInterface();
-        
-		DecompileOptions options;
-		options = new DecompileOptions(); 
-		OptionsService service = state.getTool().getService(OptionsService.class);
-		if (service != null) {
-			ToolOptions opt = service.getOptions("Decompiler");
-			options.grabFromToolAndProgram(null,opt,program);    	
-		}
-        decomplib.setOptions(options);
-        
-		decomplib.toggleCCode(true);
-		decomplib.toggleSyntaxTree(true);
-		decomplib.setSimplificationStyle("decompile");
-		
-		return decomplib;
-	}
 
-
-	private boolean printIncomingCallsInit(Function function, int depth, FlatDecompilerAPI flatApi) throws CancelledException, NullPointerException, DecompileException {
-		
-		//println("DEPTH Main: " + depth + ", Function: "+function.getName());
-		logger.info("DEPTH Main: " + depth + ", Function: "+function.getName());
+	private boolean printIncomingCallsInit(Function function, FlatDecompilerAPI flatApi) throws CancelledException, NullPointerException, DecompileException {
 		Address functionAddress = function.getEntryPoint();
 		FunctionSignatureFieldLocation location =
 			new FunctionSignatureFieldLocation(function.getProgram(), functionAddress);
@@ -363,19 +332,17 @@ public class ScanfStrcmp extends GhidraScript {
 		Set<Function> callingFunctions = new HashSet<>();
 		for (Address fromAddress : addresses) {
 			Function callerFunction = functionManager.getFunctionContaining(fromAddress);
-
-			callingFunctions.add(callerFunction);
-			/*
 			if (callerFunction != null) {
 				callingFunctions.add(callerFunction);
-			}*/
+			}
 		}
 
 		// sort them by address
 		List<Function> list = new ArrayList<>(callingFunctions);
-		//Collections.sort(list, (f1, f2) -> f1.getEntryPoint().compareTo(f2.getEntryPoint()));
+		Collections.sort(list, (f1, f2) -> f1.getEntryPoint().compareTo(f2.getEntryPoint()));
 
-		for (Function f : list) {	
+		for (Function f : list) {
+			
 			//don't start function search if it's already searched as start point
 	    	if (searchedList.get(f.getName()) != null) {
 	    		// Skip decompile if it is already searched
@@ -386,18 +353,52 @@ public class ScanfStrcmp extends GhidraScript {
 	    	searchedList.put(f.getName(), 1);
 			//println("printIncomingCallsInit: " + f.getName() + " @ " + f.getEntryPoint());
 			decompileFunction2(f, flatApi);
-	    	printOutgoingCalls(f, depth, flatApi);
+	    	//decompileFunctionRecursive(f, decomplib);
+	    	// Step C
+	    	//printIncomingCalls(f, decomplib, depth);
+//
+	    	// Step C
+	    	//printOutgoingCalls(f, decomplib, depth);
 		}
 		return true;
 	}
 	
-	private boolean printOutgoingCalls(Function function, int depth, FlatDecompilerAPI flatApi) throws NullPointerException, DecompileException {
-		//println("DEPTH child: " + depth + ", Function: "+function.getName());
-		logger.info("DEPTH child: " + depth + ", Function: "+function.getName());
-		if (depth == 0) {
-			System.exit(0);
+	private boolean printIncomingCalls(Function function,  String childFunctionName, int paramN, FlatDecompilerAPI flatApi, int depth) throws CancelledException, NullPointerException, DecompileException {
+		if(depth == 0) {
 			return false;
 		}
+		depth-=1;
+
+		Address functionAddress = function.getEntryPoint();
+		FunctionSignatureFieldLocation location =
+			new FunctionSignatureFieldLocation(function.getProgram(), functionAddress);
+		Set<Address> addresses = ReferenceUtils.getReferenceAddresses(location, monitor);
+		FunctionManager functionManager = currentProgram.getFunctionManager();
+		Set<Function> callingFunctions = new HashSet<>();
+		for (Address fromAddress : addresses) {
+			Function callerFunction = functionManager.getFunctionContaining(fromAddress);
+			if (callerFunction != null) {
+				callingFunctions.add(callerFunction);
+			}
+		}
+
+		// sort them by address
+		List<Function> list = new ArrayList<>(callingFunctions);
+		Collections.sort(list, (f1, f2) -> f1.getEntryPoint().compareTo(f2.getEntryPoint()));
+
+		for (Function f : list) {
+			println("Incoming Function Call: " + f.getName() + " @ " + f.getEntryPoint());
+			//decompileFunctionRecursive(f, childFunctionName, paramN, flatApi, depth);
+	    	// Step C
+	    	//printIncomingCalls(f, decomplib, "now", 2);
+//
+	    	// Step C
+	    	//printOutgoingCalls(f, decomplib, depth);
+		}
+		return true;
+	}
+
+	private boolean printOutgoingCalls(Function function, DecompInterface decomplib, String childFunctionName) throws NullPointerException, DecompileException {
 		AddressSetView functionBody = function.getBody();
 		Set<Reference> references = getReferencesFrom(currentProgram, functionBody);
 		Set<Function> outgoingFunctions = new HashSet<>();
@@ -413,20 +414,7 @@ public class ScanfStrcmp extends GhidraScript {
 		Collections.sort(list, (f1, f2) -> f1.getEntryPoint().compareTo(f2.getEntryPoint()));
 
 		for (Function f : list) {
-			//println("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
-			logger.info("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
-			decompileFunction2(f, flatApi);
-	    	// Step C
-			depth -= 1;
-	    	printOutgoingCalls(f, depth, flatApi);
-
-	    	/*
-	    	try {
-				printIncomingCalls(f, depth, flatApi);
-			} catch (CancelledException e) {
-				continue;
-			}*/
-
+	    	//decompileFunctionRecurisive(f, decomplib, childFunctionName);
 		}
 		return true;
 	}

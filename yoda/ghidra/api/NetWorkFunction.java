@@ -72,17 +72,25 @@ public class NetWorkFunction extends GhidraScript {
   private FlatDecompilerAPI decompApi;
   private TaskMonitor monitor;
   private GhidraState state;
+  private HashMap<String, String> result = new HashMap<>();
   
    /**
    * @throws Exception 
    * @see ghidra.app.script.GhidraScript#run()
    */
-  public void getVals(FlatDecompilerAPI api, GhidraState s, TaskMonitor m, Program c) throws Exception {
+  public HashMap<String,String> getVals(FlatDecompilerAPI api, GhidraState s, TaskMonitor m, Program c) throws Exception {
 	  decompApi = api;
 	  state = s;
 	  monitor = m;
 	  currentProgram = c;
-			  
+
+      //reset 
+      searchedList = new HashMap<String, Integer>();
+      searchedCount = 0;
+      candidateCount = 0;
+      
+	  /* FILE LOGGER */
+	  /*
       LocalDateTime date = LocalDateTime.now();
       DateTimeFormatter formatter_day = DateTimeFormatter.ofPattern("yyyy-MM-dd");
       DateTimeFormatter formatter_time = DateTimeFormatter.ofPattern("HH-mm");
@@ -102,16 +110,11 @@ public class NetWorkFunction extends GhidraScript {
           }
       }
       
-      //reset 
-      searchedList = new HashMap<String, Integer>();
-      searchedCount = 0;
-      candidateCount = 0;
-      
 		//logger
       try {  
 
           // This block configure the logger with handler and formatter  append true
-      	fh = new FileHandler( directory.toString() + "/" + date.format(formatter_time) + "-stringsearch.log", true);
+      	fh = new FileHandler( directory.toString() + "/" + date.format(formatter_time) + "-networkfunction.log", true);
           logger.addHandler(fh);
           fh.setFormatter(new MyCustomFormatter()); 
 
@@ -121,6 +124,8 @@ public class NetWorkFunction extends GhidraScript {
           e.printStackTrace();  
       } 
 
+      */
+      
       //measure running time
       long runningTimeStart = System.nanoTime();
       
@@ -177,7 +182,11 @@ public class NetWorkFunction extends GhidraScript {
               
           }//end if symbol found         
       }// end while     
-      logger.info(getCondidateCount() +" functions were chosen as candidate");
+      
+      return result;
+      
+      /* FILE LOGGER*/
+      /* logger.info(getCondidateCount() +" functions were chosen as candidate");
       logger.info(getSearchedCount() +" functions were searched");
 
       //measure running time
@@ -194,6 +203,7 @@ public class NetWorkFunction extends GhidraScript {
       decompApi.dispose();
 
       logger.setUseParentHandlers(false);
+      */
 
   }
 
@@ -233,21 +243,20 @@ public class NetWorkFunction extends GhidraScript {
           List<String> decompiled = resLines.collect(Collectors.toList());
           //variables
           List<String> result_strncmp = new ArrayList<String>(); //param, stack, data,local
-          List<String> result_strncmp_etc = new ArrayList<String>(); //not abobe
-          
-          
-          
+          List<String> result_strncmp_etc = new ArrayList<String>(); //not above
+                  
           boolean found = false;
           String matched = "";
 
           //strcmp("password", Stack) どちらかが埋め込み文字列であること["'].*["'] -> ("password", hogehoge) や(hogehoge,'password')をさがす
           for(String str: decompiled) {
           	//mac: デコンパイル結果に埋め込み文字列がでてくるが，winはPTR__で表示されるので注意
-          	//if(str.contains("str")) {
+          	if(str.contains("str")) {
           		//debug
           		//println("ORG:"+str);
-          		logger.info("ORG:"+str);
-          	//}
+          		//logger.info("ORG:"+str);
+          		result.put(f.getName(), str);
+          	}
           	/*
               String regex = ".*str.*cmp(.*\".*\".*).*";
               Pattern p = Pattern.compile(regex);
@@ -284,18 +293,6 @@ public class NetWorkFunction extends GhidraScript {
       }
 
       return null;
-  }
-
-	
-  private String getVariableAndContent(String line,boolean content) {
-  	String left = line.replaceAll(" = .*", ""); 
-  	String right = line.replaceAll(".* = |;|\\*|\\+|\\)|\\(", ""); 
-
-  	if(content) {
-  		return right;
-  	}else {
-  		return left;
-  	}
   }
 
 

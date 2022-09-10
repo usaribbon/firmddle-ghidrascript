@@ -5,6 +5,8 @@
 //@menupath 
 //@toolbar 
 
+import java.util.HashMap;
+
 import ghidra.app.decompiler.flatapi.FlatDecompilerAPI;
 import ghidra.app.script.GhidraScript;
 import yoda.ghidra.api.*;
@@ -18,16 +20,40 @@ public class Yoda20220907_API extends GhidraScript {
 	private FlatDecompilerAPI decompApi;
     @Override
     public void run() throws Exception {
-        monitor.setMessage("Counting symbols...");
+        monitor.setMessage("Running Script...");
+        
+        /* NetWorkFuncion*/
+        /*
         NetWorkFunction network = new NetWorkFunction();
-        network.getVals(decompApi, state, monitor, currentProgram);
-        
+        HashMap<String,String> networkResult = network.getVals(decompApi, state, monitor, currentProgram);
+        networkResult.forEach((key, value)-> {
+        	// key -> function name
+        	// value -> program line
+            println(key + " " + value);
+        });
+        */
+
+        /* MemsetUserInput*/
+        /*
         MemsetUserInputString userinput = new MemsetUserInputString();
-        userinput.getVals(decompApi, state, monitor, currentProgram);
+        HashMap<String,String> userinputResult = userinput.getVals(decompApi, state, monitor, currentProgram);
+        userinputResult.forEach((key, value)-> {
+        	// key -> function name
+        	// value -> program line
+            println(key + " " + value);
+        });
+        */
+        /* StringSearch*/
+        StringSearch strings = new StringSearch();
+        HashMap<String,String> stringsResult = strings.getVals(decompApi, state, monitor, currentProgram);
+        stringsResult.forEach((key, value)-> {
+        	// key -> function name
+        	// value -> program line
+            println(key + " " + value);
+        });
         
-        ScanfStrcmp scanf = new ScanfStrcmp();
-        scanf.getVals(decompApi, state, monitor, currentProgram);
-        
-        
+
+        //ScanfStrcmp scanf = new ScanfStrcmp();
+        //scanf.getVals(decompApi, state, monitor, currentProgram);
     }
 }
