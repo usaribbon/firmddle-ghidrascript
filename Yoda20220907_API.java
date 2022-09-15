@@ -42,8 +42,15 @@ public class Yoda20220907_API extends GhidraScript {
         	// value -> program line
             println(key + " " + value);
         });
-        */
+        ScanfStrcmp scanf = new ScanfStrcmp();
+        HashMap<String,String> userinputScanfResult = scanf.getVals(decompApi, state, monitor, currentProgram);
+        userinputScanfResult.forEach((key, value)-> {
+            println(key + " " + value);
+        });*/
+        
+        
         /* StringSearch*/
+        /*
         StringSearch strings = new StringSearch();
         HashMap<String,String> stringsResult = strings.getVals(decompApi, state, monitor, currentProgram);
         stringsResult.forEach((key, value)-> {
@@ -51,9 +58,7 @@ public class Yoda20220907_API extends GhidraScript {
         	// value -> program line
             println(key + " " + value);
         });
+        */
         
-
-        //ScanfStrcmp scanf = new ScanfStrcmp();
-        //scanf.getVals(decompApi, state, monitor, currentProgram);
     }
 }

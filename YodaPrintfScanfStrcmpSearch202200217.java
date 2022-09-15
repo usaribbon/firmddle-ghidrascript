@@ -91,14 +91,17 @@ public class YodaPrintfScanfStrcmpSearch202200217 extends GhidraScript {
         DateTimeFormatter formatter_day = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         DateTimeFormatter formatter_time = DateTimeFormatter.ofPattern("HH-mm");
         String homepath = "C:/Users/MinamiYoda/Documents/Program/firmware/docker/result/files/YodaPrintfScanfSearch202200215/"+date.format(formatter_day)+"/";
-        String projectName = this.getProgramFile().getName();
-        String FirmwareMaker = this.getProgramFile().getPath();
-        FirmwareMaker = FirmwareMaker.substring(61).replace("\\", "_").replace(".bin", "");
+        String FirmwareMaker = currentProgram.getExecutablePath();
+        if(FirmwareMaker.length() > 80) {
+            FirmwareMaker = FirmwareMaker.substring(61).replace("\\", "_").replace(":", "").replace("/", "_").replace(".bin", "");
+        }else {
+            FirmwareMaker = FirmwareMaker.replace("\\", "_").replace(":", "").replace("/", "_").replace(".bin", "");
+        }
         File directory = new File(homepath + FirmwareMaker);
         if (!directory.exists()){
             boolean dir_made = directory.mkdirs();
             if(dir_made) {
-                println(directory.toString());
+                //println(directory.toString());
             }
         }
         
@@ -373,49 +376,49 @@ public class YodaPrintfScanfStrcmpSearch202200217 extends GhidraScript {
 	    	searchedList.put(f.getName(), 1);
 			//println("printIncomingCallsInit: " + f.getName() + " @ " + f.getEntryPoint());
 			decompileFunction2(f, flatApi);
-	    	printOutgoingCalls(f, depth, flatApi);
+			printOutgoingCalls(f, depth, flatApi);
 		}
 		return true;
 	}
 	
 	private boolean printOutgoingCalls(Function function, int depth, FlatDecompilerAPI flatApi) throws NullPointerException, DecompileException {
-		println("DEPTH child: " + depth + ", Function: "+function.getName());
+		println("DEPTH child: " + depth + ", Function: "+function.getName() +""+ Math.signum(depth));
 		logger.info("DEPTH child: " + depth + ", Function: "+function.getName());
-		if (depth == 0) {
-			System.exit(0);
+		if (Math.signum(depth) == -1.0) {
 			return false;
+		}else {
+			AddressSetView functionBody = function.getBody();
+			Set<Reference> references = getReferencesFrom(currentProgram, functionBody);
+			Set<Function> outgoingFunctions = new HashSet<>();
+			FunctionManager functionManager = currentProgram.getFunctionManager();
+			for (Reference reference : references) {
+				Address toAddress = reference.getToAddress();
+				Function calledFunction = functionManager.getFunctionAt(toAddress);
+				maybeAddIncomingFunction(outgoingFunctions, reference, calledFunction);
+			}
+
+			// sort them by address
+			List<Function> list = new ArrayList<>(outgoingFunctions);
+			Collections.sort(list, (f1, f2) -> f1.getEntryPoint().compareTo(f2.getEntryPoint()));
+
+			for (Function f : list) {
+				println("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
+				logger.info("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
+				decompileFunction2(f, flatApi);
+		    	// Step C
+				depth -= 1;
+		    	printOutgoingCalls(f, depth, flatApi);
+
+		    	/*
+		    	try {
+					printIncomingCalls(f, depth, flatApi);
+				} catch (CancelledException e) {
+					continue;
+				}*/
+
+			}
+			return true;
 		}
-		AddressSetView functionBody = function.getBody();
-		Set<Reference> references = getReferencesFrom(currentProgram, functionBody);
-		Set<Function> outgoingFunctions = new HashSet<>();
-		FunctionManager functionManager = currentProgram.getFunctionManager();
-		for (Reference reference : references) {
-			Address toAddress = reference.getToAddress();
-			Function calledFunction = functionManager.getFunctionAt(toAddress);
-			maybeAddIncomingFunction(outgoingFunctions, reference, calledFunction);
-		}
-
-		// sort them by address
-		List<Function> list = new ArrayList<>(outgoingFunctions);
-		Collections.sort(list, (f1, f2) -> f1.getEntryPoint().compareTo(f2.getEntryPoint()));
-
-		for (Function f : list) {
-			println("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
-			logger.info("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
-			decompileFunction2(f, flatApi);
-	    	// Step C
-			depth -= 1;
-	    	printOutgoingCalls(f, depth, flatApi);
-
-	    	/*
-	    	try {
-				printIncomingCalls(f, depth, flatApi);
-			} catch (CancelledException e) {
-				continue;
-			}*/
-
-		}
-		return true;
 	}
 
 	private void maybeAddIncomingFunction(Set<Function> incomingFunctions, Reference reference,

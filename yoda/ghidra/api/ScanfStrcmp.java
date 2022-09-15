@@ -80,13 +80,18 @@ public class ScanfStrcmp extends GhidraScript {
      * @throws DecompileException 
      * @see ghidra.app.script.GhidraScript#run()
      */
-    public void getVals(FlatDecompilerAPI api, GhidraState s, TaskMonitor m, Program c) throws Exception {
+    public HashMap<String, String> getVals(FlatDecompilerAPI api, GhidraState s, TaskMonitor m, Program c) throws Exception {
 		decompApi = api;
 		state = s;
 		monitor = m;
 		currentProgram = c;
-        monitor.setMessage("Counting symbols...");
+        monitor.setMessage("Runnning ScanfStrcmp...");
 
+        //reset 
+        searchedList = new HashMap<String, Integer>();
+        searchedCount = 0;
+        candidateCount = 0;
+        
         //enableHeadlessAnalysis(true);  // turn on analysis
         //boolean analysisEnabled = isHeadlessAnalysisEnabled();
         /*DefinedStringIterator definedStringIterator = new DefinedStringIterator(state.getCurrentProgram(), false);
@@ -96,6 +101,8 @@ public class ScanfStrcmp extends GhidraScript {
 
 		}*/
 
+	    /* FILE LOGGER */
+	    /*
         LocalDateTime date = LocalDateTime.now();
         DateTimeFormatter formatter_day = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         DateTimeFormatter formatter_time = DateTimeFormatter.ofPattern("HH-mm");
@@ -135,6 +142,7 @@ public class ScanfStrcmp extends GhidraScript {
             e.printStackTrace();  
         } 
 
+        */
         //measure running time
         long runningTimeStart = System.nanoTime();
 
@@ -185,8 +193,9 @@ public class ScanfStrcmp extends GhidraScript {
         			
         			try {
         				//println("DEPTH Start: " + maxDepth + ", Function: "+ refFunc.getName());
-        				logger.info("DEPTH Start: " + maxDepth + ", Function: "+ refFunc.getName());
+        				//logger.info("DEPTH Start: " + maxDepth + ", Function: "+ refFunc.getName());
         				printIncomingCallsInit(refFunc, maxDepth, decompApi);
+
         			} catch(NullPointerException e){
                     	continue;
                     }
@@ -194,7 +203,10 @@ public class ScanfStrcmp extends GhidraScript {
 
             
             }//end if symbol found         
-        }// end while     
+        }// end while  
+        return result;
+        /* FILE LOGGER*/
+        /*       
         logger.info(getCondidateCount() +" functions were chosen as candidate");
         logger.info(getSearchedCount() +" functions were searched");
 
@@ -217,6 +229,7 @@ public class ScanfStrcmp extends GhidraScript {
         }
 
 
+        */
     }
 
     
@@ -262,9 +275,10 @@ public class ScanfStrcmp extends GhidraScript {
              //strcmp("password", Stack) どちらかが埋め込み文字列であること["'].*["'] -> ("password", hogehoge) や(hogehoge,'password')をさがす
              for(String str: decompiled) {
 				     //println("matched:"+str);
-	             		logger.info(str);
+	             		//logger.info(str);
              	//mac: デコンパイル結果に埋め込み文字列がでてくるが，winはPTR__で表示されるので注意
              	if(str.contains("str")) {
+                 	result.put(f.getName(),str);
              		//debug
              		//println("matched:"+str);
              		//logger.info(str);
@@ -274,6 +288,7 @@ public class ScanfStrcmp extends GhidraScript {
                  Pattern p = Pattern.compile(regex);
                  Matcher m = p.matcher(str);
                  if (m.find()){
+
  					//logger.info(str);
  					String matchstr = m.group();
  					//m.group(1)はｓｔｒｃｍｐの引数が表示される，0は全文
@@ -292,11 +307,6 @@ public class ScanfStrcmp extends GhidraScript {
                  }
              }
              
-             if(found) {
-             	addCondidateCount();
-                 logger.info("..... " + f.getName() +"\n\n\n");
-             }
-         
              
              if (hfunction == null)
              	return null;
@@ -354,7 +364,7 @@ public class ScanfStrcmp extends GhidraScript {
 	private boolean printIncomingCallsInit(Function function, int depth, FlatDecompilerAPI flatApi) throws CancelledException, NullPointerException, DecompileException {
 		
 		//println("DEPTH Main: " + depth + ", Function: "+function.getName());
-		logger.info("DEPTH Main: " + depth + ", Function: "+function.getName());
+		//logger.info("DEPTH Main: " + depth + ", Function: "+function.getName());
 		Address functionAddress = function.getEntryPoint();
 		FunctionSignatureFieldLocation location =
 			new FunctionSignatureFieldLocation(function.getProgram(), functionAddress);
@@ -386,49 +396,52 @@ public class ScanfStrcmp extends GhidraScript {
 	    	searchedList.put(f.getName(), 1);
 			//println("printIncomingCallsInit: " + f.getName() + " @ " + f.getEntryPoint());
 			decompileFunction2(f, flatApi);
-	    	printOutgoingCalls(f, depth, flatApi);
+	    	if(!printOutgoingCalls(f, depth, flatApi)) {
+	    		continue;
+	    	}
 		}
-		return true;
+		return false;
 	}
 	
 	private boolean printOutgoingCalls(Function function, int depth, FlatDecompilerAPI flatApi) throws NullPointerException, DecompileException {
 		//println("DEPTH child: " + depth + ", Function: "+function.getName());
-		logger.info("DEPTH child: " + depth + ", Function: "+function.getName());
-		if (depth == 0) {
-			System.exit(0);
+		//logger.info("DEPTH child: " + depth + ", Function: "+function.getName());
+		if (Math.signum(depth) == -1.0) {
+			//System.exit(0);
 			return false;
+		}else {
+			AddressSetView functionBody = function.getBody();
+			Set<Reference> references = getReferencesFrom(currentProgram, functionBody);
+			Set<Function> outgoingFunctions = new HashSet<>();
+			FunctionManager functionManager = currentProgram.getFunctionManager();
+			for (Reference reference : references) {
+				Address toAddress = reference.getToAddress();
+				Function calledFunction = functionManager.getFunctionAt(toAddress);
+				maybeAddIncomingFunction(outgoingFunctions, reference, calledFunction);
+			}
+	
+			// sort them by address
+			List<Function> list = new ArrayList<>(outgoingFunctions);
+			Collections.sort(list, (f1, f2) -> f1.getEntryPoint().compareTo(f2.getEntryPoint()));
+	
+			for (Function f : list) {
+				//println("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
+				//logger.info("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
+				decompileFunction2(f, flatApi);
+		    	// Step C
+				depth -= 1;
+		    	printOutgoingCalls(f, depth, flatApi);
+	
+		    	/*
+		    	try {
+					printIncomingCalls(f, depth, flatApi);
+				} catch (CancelledException e) {
+					continue;
+				}*/
+	
+			}
+			return true;
 		}
-		AddressSetView functionBody = function.getBody();
-		Set<Reference> references = getReferencesFrom(currentProgram, functionBody);
-		Set<Function> outgoingFunctions = new HashSet<>();
-		FunctionManager functionManager = currentProgram.getFunctionManager();
-		for (Reference reference : references) {
-			Address toAddress = reference.getToAddress();
-			Function calledFunction = functionManager.getFunctionAt(toAddress);
-			maybeAddIncomingFunction(outgoingFunctions, reference, calledFunction);
-		}
-
-		// sort them by address
-		List<Function> list = new ArrayList<>(outgoingFunctions);
-		Collections.sort(list, (f1, f2) -> f1.getEntryPoint().compareTo(f2.getEntryPoint()));
-
-		for (Function f : list) {
-			//println("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
-			logger.info("Outgoing Function Call: " + f.getName() + " @ " + f.getEntryPoint());
-			decompileFunction2(f, flatApi);
-	    	// Step C
-			depth -= 1;
-	    	printOutgoingCalls(f, depth, flatApi);
-
-	    	/*
-	    	try {
-				printIncomingCalls(f, depth, flatApi);
-			} catch (CancelledException e) {
-				continue;
-			}*/
-
-		}
-		return true;
 	}
 
 	private void maybeAddIncomingFunction(Set<Function> incomingFunctions, Reference reference,
