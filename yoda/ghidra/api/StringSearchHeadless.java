@@ -91,7 +91,7 @@ public class StringSearchHeadless extends GhidraScript {
         LocalDateTime date = LocalDateTime.now();
         DateTimeFormatter formatter_day = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         DateTimeFormatter formatter_time = DateTimeFormatter.ofPattern("HH-mm");
-        String homepath = logPath+date.format(formatter_day)+"/";
+        String homepath = logPath+"/StringSearchHeadless/"+date.format(formatter_day)+"/";
 
         String FirmwareMaker = currentProgram.getExecutablePath();
         if(FirmwareMaker.length() > 80) {
