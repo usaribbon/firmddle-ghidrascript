@@ -11,7 +11,7 @@ import ghidra.app.decompiler.flatapi.FlatDecompilerAPI;
 import ghidra.app.script.GhidraScript;
 import yoda.ghidra.api.*;
 
-public class Yoda20220907_API extends GhidraScript {
+public class Yoda_API extends GhidraScript {
 
      /**
      * @throws Exception 

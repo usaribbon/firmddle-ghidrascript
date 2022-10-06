@@ -11,7 +11,7 @@ import ghidra.app.decompiler.flatapi.FlatDecompilerAPI;
 import ghidra.app.script.GhidraScript;
 import yoda.ghidra.api.*;
 
-public class Yoda20220907_API_Headless extends GhidraScript {
+public class Yoda_API_Headless extends GhidraScript {
 
      /**
      * @throws Exception 
@@ -21,7 +21,7 @@ public class Yoda20220907_API_Headless extends GhidraScript {
     @Override
     public void run() throws Exception {
         monitor.setMessage("Running Script...");
-        String logPath = "/mnt/raw_firmwares/logs/";
+        String logPath = "/mnt/raw_firmwares/logs";
         /* NetWorkFuncion*/
         NetWorkFunctionHeadless network = new NetWorkFunctionHeadless();
         network.getVals(decompApi, state, monitor, currentProgram, logPath);
