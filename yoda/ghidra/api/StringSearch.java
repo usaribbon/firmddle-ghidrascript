@@ -150,9 +150,9 @@ public class StringSearch extends GhidraScript {
 
      		addSearchedCount();
 
-            if (sym != null && sym.getName().matches("strn?cmp")) {
+            if (sym != null && sym.getName().contains("cmp")) {
         		Reference refs[] = sym.getReferences(null);
-        		
+
         		for(int i=0; i<refs.length;i++) {      
         			if(monitor.isCancelled()) {
         				break;
@@ -255,18 +255,19 @@ public class StringSearch extends GhidraScript {
             //strcmp("password", Stack) どちらかが埋め込み文字列であること["'].*["'] -> ("password", hogehoge) や(hogehoge,'password')をさがす
             for(String str: decompiled) {
             	//mac: デコンパイル結果に埋め込み文字列がでてくるが，winはPTR__で表示されるので注意
-            	if(str.contains("str")) {
+            	if(str.contains("cmp")) {
             		//debug
             		//println("ORG:"+str);
             		//logger.info("ORG:"str);
+				    result.put(f.getName(), str);
             	}
-                String regex = ".*strn?cmp\\((.*,.*,.*|.*,.*)\\).*";
+            	/*
+                String regex = ".*str.*cmp.*\\((.*,.*,.*|.*,.*)\\).*";
                 Pattern p = Pattern.compile(regex);
                 Matcher m = p.matcher(str);
                 if (m.find()){
 					//logger.info(str);
 					String matchstr = m.group();
-				    result.put(f.getName(), str);
 					//m.group(1)はｓｔｒｃｍｐの引数が表示される，0は全文
 					String[] vars = m.group(1).split(",");
 					for(String var: vars) {
@@ -279,7 +280,7 @@ public class StringSearch extends GhidraScript {
 					      
 					  }
 					}
-                }	
+                }	*/
             }
             
             if(found) {

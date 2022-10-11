@@ -97,7 +97,7 @@ public class MemsetUserInputStringHeadless extends GhidraScript {
         DateTimeFormatter formatter_day = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         DateTimeFormatter formatter_time = DateTimeFormatter.ofPattern("HH-mm");
 
-        String homepath = logPath+"/MemsetUserInputStringHeadless/"+date.format(formatter_day)+"/";
+        String homepath = logPath+"/"+date.format(formatter_day)+"/";
         String FirmwareMaker = currentProgram.getExecutablePath();
         if(FirmwareMaker.length() > 80) {
             FirmwareMaker = FirmwareMaker.substring(61).replace("\\", "_").replace(":", "").replace("/", "_").replace(".bin", "");
@@ -147,7 +147,7 @@ public class MemsetUserInputStringHeadless extends GhidraScript {
 
      		addSearchedCount();
 
-            if (sym != null && sym.getName().matches("strn?cmp")) {
+            if (sym != null && sym.getName().matches("cmp")) {
         		Reference refs[] = sym.getReferences(null);
         		
         		for(int i=0; i<refs.length;i++) {             			
@@ -244,11 +244,12 @@ public class MemsetUserInputStringHeadless extends GhidraScript {
             //strcmp("password", Stack) どちらかが埋め込み文字列であること["'].*["'] -> ("password", hogehoge) や(hogehoge,'password')をさがす
             for(String str: decompiled) {
             	//mac: デコンパイル結果に埋め込み文字列がでてくるが，winはPTR__で表示されるので注意
-            	if(str.contains("str")) {
+            	if(str.contains("cmp")) {
             		//debug
             		//println("ORG:"+str);
             		//logger.info(str);
-            	}
+            		logger.info("FunctionName:"+f.getName() +", Line:"+str);
+            	}/*
                 String regex = ".*strn?cmp\\((.*,.*,.*|.*,.*)\\).*";
                 Pattern p = Pattern.compile(regex);
                 Matcher m = p.matcher(str);
@@ -267,7 +268,7 @@ public class MemsetUserInputStringHeadless extends GhidraScript {
 					      
 					  }
 					}
-                }	
+                }	*/
             }
             
             if(found) {

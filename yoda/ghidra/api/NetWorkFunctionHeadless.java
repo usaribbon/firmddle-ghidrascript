@@ -93,7 +93,7 @@ public class NetWorkFunctionHeadless extends GhidraScript {
       DateTimeFormatter formatter_day = DateTimeFormatter.ofPattern("yyyy-MM-dd");
       DateTimeFormatter formatter_time = DateTimeFormatter.ofPattern("HH-mm");
 
-      String homepath = logPath+"/NetWorkFunctionHeadless/"+date.format(formatter_day)+"/";
+      String homepath = logPath+"/"+date.format(formatter_day)+"/";
       String FirmwareMaker = currentProgram.getExecutablePath();
       if(FirmwareMaker.length() > 80) {
           FirmwareMaker = FirmwareMaker.substring(61).replace("\\", "_").replace(":", "").replace("/", "_").replace(".bin", "");
@@ -242,7 +242,7 @@ public class NetWorkFunctionHeadless extends GhidraScript {
           //strcmp("password", Stack) どちらかが埋め込み文字列であること["'].*["'] -> ("password", hogehoge) や(hogehoge,'password')をさがす
           for(String str: decompiled) {
           	//mac: デコンパイル結果に埋め込み文字列がでてくるが，winはPTR__で表示されるので注意
-          	if(str.contains("str")) {
+          	if(str.contains("cmp")) {
           		//debug
           		//println("ORG:"+str);
           		//logger.info("ORG:"+str);

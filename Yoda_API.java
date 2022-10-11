@@ -50,7 +50,7 @@ public class Yoda_API extends GhidraScript {
         
         
         /* StringSearch*/
-        /*
+        
         StringSearch strings = new StringSearch();
         HashMap<String,String> stringsResult = strings.getVals(decompApi, state, monitor, currentProgram);
         stringsResult.forEach((key, value)-> {
@@ -58,7 +58,7 @@ public class Yoda_API extends GhidraScript {
         	// value -> program line
             println(key + " " + value);
         });
-        */
+        
         
     }
 }

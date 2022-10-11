@@ -91,7 +91,7 @@ public class StringSearchHeadless extends GhidraScript {
         LocalDateTime date = LocalDateTime.now();
         DateTimeFormatter formatter_day = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         DateTimeFormatter formatter_time = DateTimeFormatter.ofPattern("HH-mm");
-        String homepath = logPath+"/StringSearchHeadless/"+date.format(formatter_day)+"/";
+        String homepath = logPath+"/"+date.format(formatter_day)+"/";
 
         String FirmwareMaker = currentProgram.getExecutablePath();
         if(FirmwareMaker.length() > 80) {
@@ -147,7 +147,7 @@ public class StringSearchHeadless extends GhidraScript {
 
      		addSearchedCount();
 
-            if (sym != null && sym.getName().matches("strn?cmp")) {
+            if (sym != null && sym.getName().matches("cmp")) {
         		Reference refs[] = sym.getReferences(null);
         		
         		for(int i=0; i<refs.length;i++) {      
@@ -250,7 +250,9 @@ public class StringSearchHeadless extends GhidraScript {
             		//debug
             		//println("ORG:"+str);
             		//logger.info("ORG:"str);
+            		logger.info("FunctionName:"+f.getName() +", Line:"+str);
             	}
+            	/*
                 String regex = ".*strn?cmp\\((.*,.*,.*|.*,.*)\\).*";
                 Pattern p = Pattern.compile(regex);
                 Matcher m = p.matcher(str);
@@ -270,7 +272,7 @@ public class StringSearchHeadless extends GhidraScript {
 					      
 					  }
 					}
-                }	
+                }	*/
             }
             
             if(found) {

@@ -277,13 +277,13 @@ public class ScanfStrcmp extends GhidraScript {
 				     //println("matched:"+str);
 	             		//logger.info(str);
              	//mac: デコンパイル結果に埋め込み文字列がでてくるが，winはPTR__で表示されるので注意
-             	if(str.contains("str")) {
+             	if(str.contains("cmp")) {
                  	result.put(f.getName(),str);
              		//debug
              		//println("matched:"+str);
              		//logger.info(str);
              	}
-             	
+             	/*
                  String regex = ".*strn?cmp\\((.*,.*,.*|.*,.*)\\).*";
                  Pattern p = Pattern.compile(regex);
                  Matcher m = p.matcher(str);
@@ -304,7 +304,7 @@ public class ScanfStrcmp extends GhidraScript {
  	             		//logger.info(var);
  					  }
  					}
-                 }
+                 }*/
              }
              
              

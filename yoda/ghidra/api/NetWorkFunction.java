@@ -251,7 +251,7 @@ public class NetWorkFunction extends GhidraScript {
           //strcmp("password", Stack) どちらかが埋め込み文字列であること["'].*["'] -> ("password", hogehoge) や(hogehoge,'password')をさがす
           for(String str: decompiled) {
           	//mac: デコンパイル結果に埋め込み文字列がでてくるが，winはPTR__で表示されるので注意
-          	if(str.contains("str")) {
+          	if(str.contains("cmp")) {
           		//debug
           		//println("ORG:"+str);
           		//logger.info("ORG:"+str);

@@ -253,11 +253,13 @@ public class MemsetUserInputString extends GhidraScript {
             //strcmp("password", Stack) どちらかが埋め込み文字列であること["'].*["'] -> ("password", hogehoge) や(hogehoge,'password')をさがす
             for(String str: decompiled) {
             	//mac: デコンパイル結果に埋め込み文字列がでてくるが，winはPTR__で表示されるので注意
-            	if(str.contains("str")) {
+            	if(str.contains("cmp")) {
+				    result.put(f.getName(), str);
             		//debug
             		//println("ORG:"+str);
             		//logger.info(str);
             	}
+            	/*
                 String regex = ".*strn?cmp\\((.*,.*,.*|.*,.*)\\).*";
                 Pattern p = Pattern.compile(regex);
                 Matcher m = p.matcher(str);
@@ -276,7 +278,7 @@ public class MemsetUserInputString extends GhidraScript {
 					      
 					  }
 					}
-                }	
+                }	*/
             }
             
             if(found) {

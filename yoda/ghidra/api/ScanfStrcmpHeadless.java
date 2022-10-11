@@ -104,7 +104,7 @@ public class ScanfStrcmpHeadless extends GhidraScript {
         DateTimeFormatter formatter_day = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         DateTimeFormatter formatter_time = DateTimeFormatter.ofPattern("HH-mm");
 
-        String homepath = logPath+"/ScanfStrcmpHeadless/"+date.format(formatter_day)+"/";
+        String homepath = logPath+"/"+date.format(formatter_day)+"/";
         String FirmwareMaker = currentProgram.getExecutablePath();
         if(FirmwareMaker.length() > 80) {
             FirmwareMaker = FirmwareMaker.substring(61).replace("\\", "_").replace(":", "").replace("/", "_").replace(".bin", "");
@@ -266,34 +266,34 @@ public class ScanfStrcmpHeadless extends GhidraScript {
 				     //println("matched:"+str);
 	             		//logger.info(str);
              	//mac: デコンパイル結果に埋め込み文字列がでてくるが，winはPTR__で表示されるので注意
-             	if(str.contains("str")) {
+             	if(str.contains("cmp")) {
             		logger.info("FunctionName:"+f.getName() +", Line:"+str);
              		//debug
              		//println("matched:"+str);
              		//logger.info(str);
              	}
              	
-                 String regex = ".*strn?cmp\\((.*,.*,.*|.*,.*)\\).*";
-                 Pattern p = Pattern.compile(regex);
-                 Matcher m = p.matcher(str);
-                 if (m.find()){
-
- 					//logger.info(str);
- 					String matchstr = m.group();
- 					//m.group(1)はｓｔｒｃｍｐの引数が表示される，0は全文
- 					String[] vars = m.group(1).split(",");
- 					for(String var: vars) {
- 					  if(!result_strncmp.contains(var)) {
- 					      result_strncmp.add(var);
- 					      //boolean res = checkParentValue(var,str,decompiled);
- 					      //if(res) {
- 					    //	  found = true;
- 					      //}
- 					     //println("matched:"+var);
- 	             		//logger.info(var);
- 					  }
- 					}
-                 }
+	             /*String regex = ".*strn?cmp\\((.*,.*,.*|.*,.*)\\).*";
+	             Pattern p = Pattern.compile(regex);
+	             Matcher m = p.matcher(str);
+	             if (m.find()){
+	
+					//logger.info(str);
+					String matchstr = m.group();
+					//m.group(1)はｓｔｒｃｍｐの引数が表示される，0は全文
+					String[] vars = m.group(1).split(",");
+					for(String var: vars) {
+					  if(!result_strncmp.contains(var)) {
+					      result_strncmp.add(var);
+					      //boolean res = checkParentValue(var,str,decompiled);
+					      //if(res) {
+					    //	  found = true;
+					      //}
+					     //println("matched:"+var);
+	             		//logger.info(var);
+					  }
+					}
+	             }*/
              }
              
              
