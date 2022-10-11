@@ -147,7 +147,7 @@ public class MemsetUserInputStringHeadless extends GhidraScript {
 
      		addSearchedCount();
 
-            if (sym != null && sym.getName().matches("cmp")) {
+            if (sym != null && sym.getName().contains("cmp")) {
         		Reference refs[] = sym.getReferences(null);
         		
         		for(int i=0; i<refs.length;i++) {             			
@@ -248,8 +248,7 @@ public class MemsetUserInputStringHeadless extends GhidraScript {
             		//debug
             		//println("ORG:"+str);
             		//logger.info(str);
-            		logger.info("FunctionName:"+f.getName() +", Line:"+str);
-            	}/*
+            	}
                 String regex = ".*strn?cmp\\((.*,.*,.*|.*,.*)\\).*";
                 Pattern p = Pattern.compile(regex);
                 Matcher m = p.matcher(str);
@@ -264,11 +263,12 @@ public class MemsetUserInputStringHeadless extends GhidraScript {
 					      boolean res = checkParentValue(var,str,decompiled,f.getName());
 					      if(res) {
 					    	  found = true;
+			            	  logger.info("FunctionName:"+f.getName() +", Line:"+str);
 					      }
 					      
 					  }
 					}
-                }	*/
+                }
             }
             
             if(found) {

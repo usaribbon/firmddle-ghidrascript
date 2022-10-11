@@ -147,7 +147,7 @@ public class StringSearchHeadless extends GhidraScript {
 
      		addSearchedCount();
 
-            if (sym != null && sym.getName().matches("cmp")) {
+            if (sym != null && sym.getName().contains("cmp")) {
         		Reference refs[] = sym.getReferences(null);
         		
         		for(int i=0; i<refs.length;i++) {      

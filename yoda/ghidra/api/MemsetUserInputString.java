@@ -150,7 +150,7 @@ public class MemsetUserInputString extends GhidraScript {
 
      		addSearchedCount();
 
-            if (sym != null && sym.getName().matches("strn?cmp")) {
+            if (sym != null && sym.getName().contains("cmp")) {
         		Reference refs[] = sym.getReferences(null);
         		
         		for(int i=0; i<refs.length;i++) {             			
@@ -254,12 +254,11 @@ public class MemsetUserInputString extends GhidraScript {
             for(String str: decompiled) {
             	//mac: デコンパイル結果に埋め込み文字列がでてくるが，winはPTR__で表示されるので注意
             	if(str.contains("cmp")) {
-				    result.put(f.getName(), str);
             		//debug
             		//println("ORG:"+str);
             		//logger.info(str);
             	}
-            	/*
+            	
                 String regex = ".*strn?cmp\\((.*,.*,.*|.*,.*)\\).*";
                 Pattern p = Pattern.compile(regex);
                 Matcher m = p.matcher(str);
@@ -274,11 +273,12 @@ public class MemsetUserInputString extends GhidraScript {
 					      boolean res = checkParentValue(var,str,decompiled,f.getName());
 					      if(res) {
 					    	  found = true;
+							  result.put(f.getName(), str);
 					      }
 					      
 					  }
 					}
-                }	*/
+                }
             }
             
             if(found) {
