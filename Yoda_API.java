@@ -23,15 +23,15 @@ public class Yoda_API extends GhidraScript {
         monitor.setMessage("Running Script...");
         
         /* NetWorkFuncion*/
-        /*
+        
         NetWorkFunction network = new NetWorkFunction();
-        HashMap<String,String> networkResult = network.getVals(decompApi, state, monitor, currentProgram);
+        HashMap<String,String> networkResult = network.getVals(decompApi, state, monitor, currentProgram, 3);
         networkResult.forEach((key, value)-> {
         	// key -> function name
         	// value -> program line
             println(key + " " + value);
         });
-        */
+        
 
         /* MemsetUserInput*/
         /*
@@ -50,14 +50,14 @@ public class Yoda_API extends GhidraScript {
         
         
         /* StringSearch*/
-        
+        /*
         StringSearch strings = new StringSearch();
         HashMap<String,String> stringsResult = strings.getVals(decompApi, state, monitor, currentProgram);
         stringsResult.forEach((key, value)-> {
         	// key -> function name
         	// value -> program line
             println(key + " " + value);
-        });
+        });*/
         
         
     }

@@ -24,7 +24,7 @@ public class Yoda_API_Headless extends GhidraScript {
         String logPath = "/mnt/raw_firmwares/logs";
         /* NetWorkFuncion*/
         NetWorkFunctionHeadless network = new NetWorkFunctionHeadless();
-        network.getVals(decompApi, state, monitor, currentProgram, logPath);
+        network.getVals(decompApi, state, monitor, currentProgram, logPath, 3);
 
         /* MemsetUserInput*/
         
