@@ -73,6 +73,7 @@ public class NetWorkFunction extends GhidraScript {
   private TaskMonitor monitor;
   private GhidraState state;
   private HashMap<String, String> result = new HashMap<>();
+  private int MaxDepth = 3;
   
    /**
    * @throws Exception 
@@ -349,11 +350,12 @@ public class NetWorkFunction extends GhidraScript {
 	    	searchedList.put(f.getName(), 1);
 			//println("printIncomingCallsInit: " + f.getName() + " @ " + f.getEntryPoint());
 			decompileFunction2(f, flatApi);
+	    	printIncomingCalls(f, flatApi, MaxDepth);
 		}
 		return true;
 	}
 	
-	private boolean printIncomingCalls(Function function,  String childFunctionName, int paramN, FlatDecompilerAPI flatApi, int depth) throws CancelledException, NullPointerException, DecompileException {
+	private boolean printIncomingCalls(Function function, FlatDecompilerAPI flatApi, int depth) throws CancelledException, NullPointerException, DecompileException {
 		if(depth == 0) {
 			return false;
 		}
@@ -384,6 +386,8 @@ public class NetWorkFunction extends GhidraScript {
 //
 	    	// Step C
 	    	//printOutgoingCalls(f, decomplib, depth);
+			decompileFunction2(f, flatApi);
+	    	printIncomingCalls(f, flatApi, depth);
 		}
 		return true;
 	}

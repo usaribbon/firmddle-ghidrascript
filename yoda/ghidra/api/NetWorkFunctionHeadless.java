@@ -71,7 +71,8 @@ public class NetWorkFunctionHeadless extends GhidraScript {
   private FileHandler fh;
   private FlatDecompilerAPI decompApi;
   private TaskMonitor monitor;
-  private GhidraState state;;
+  private GhidraState state;
+  private int MaxDepth = 3;
   
    /**
    * @throws Exception 
@@ -335,11 +336,12 @@ public class NetWorkFunctionHeadless extends GhidraScript {
 	    	searchedList.put(f.getName(), 1);
 			//println("printIncomingCallsInit: " + f.getName() + " @ " + f.getEntryPoint());
 			decompileFunction2(f, flatApi);
+	    	printIncomingCalls(f, flatApi, MaxDepth);
 		}
 		return true;
 	}
-	
-	private boolean printIncomingCalls(Function function,  String childFunctionName, int paramN, FlatDecompilerAPI flatApi, int depth) throws CancelledException, NullPointerException, DecompileException {
+
+	private boolean printIncomingCalls(Function function, FlatDecompilerAPI flatApi, int depth) throws CancelledException, NullPointerException, DecompileException {
 		if(depth == 0) {
 			return false;
 		}
@@ -370,6 +372,8 @@ public class NetWorkFunctionHeadless extends GhidraScript {
 //
 	    	// Step C
 	    	//printOutgoingCalls(f, decomplib, depth);
+			decompileFunction2(f, flatApi);
+	    	printIncomingCalls(f, flatApi, depth);
 		}
 		return true;
 	}
