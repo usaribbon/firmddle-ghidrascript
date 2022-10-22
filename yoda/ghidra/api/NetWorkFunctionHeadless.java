@@ -78,11 +78,12 @@ public class NetWorkFunctionHeadless extends GhidraScript {
    * @throws Exception 
    * @see ghidra.app.script.GhidraScript#run()
    */
-  public void getVals(FlatDecompilerAPI api, GhidraState s, TaskMonitor m, Program c, String logPath) throws Exception {
+  public void getVals(FlatDecompilerAPI api, GhidraState s, TaskMonitor m, Program c, String logPath, int depth) throws Exception {
 	  decompApi = api;
 	  state = s;
 	  monitor = m;
 	  currentProgram = c;
+	  MaxDepth = depth;
 
       //reset 
       searchedList = new HashMap<String, Integer>();

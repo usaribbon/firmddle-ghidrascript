@@ -79,11 +79,12 @@ public class NetWorkFunction extends GhidraScript {
    * @throws Exception 
    * @see ghidra.app.script.GhidraScript#run()
    */
-  public HashMap<String,String> getVals(FlatDecompilerAPI api, GhidraState s, TaskMonitor m, Program c) throws Exception {
+  public HashMap<String,String> getVals(FlatDecompilerAPI api, GhidraState s, TaskMonitor m, Program c, int depth) throws Exception {
 	  decompApi = api;
 	  state = s;
 	  monitor = m;
 	  currentProgram = c;
+	  MaxDepth = depth;
 
       //reset 
       searchedList = new HashMap<String, Integer>();
