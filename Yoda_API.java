@@ -22,19 +22,9 @@ public class Yoda_API extends GhidraScript {
     public void run() throws Exception {
         monitor.setMessage("Running Script...");
         
-        /* NetWorkFuncion*/
-        
-        NetWorkFunction network = new NetWorkFunction();
-        HashMap<String,String> networkResult = network.getVals(decompApi, state, monitor, currentProgram, 3);
-        networkResult.forEach((key, value)-> {
-        	// key -> function name
-        	// value -> program line
-            println(key + " " + value);
-        });
-        
 
         /* MemsetUserInput*/
-        /*
+        
         MemsetUserInputString userinput = new MemsetUserInputString();
         HashMap<String,String> userinputResult = userinput.getVals(decompApi, state, monitor, currentProgram);
         userinputResult.forEach((key, value)-> {
@@ -46,18 +36,28 @@ public class Yoda_API extends GhidraScript {
         HashMap<String,String> userinputScanfResult = scanf.getVals(decompApi, state, monitor, currentProgram);
         userinputScanfResult.forEach((key, value)-> {
             println(key + " " + value);
-        });*/
+        });
         
         
         /* StringSearch*/
-        /*
+        
         StringSearch strings = new StringSearch();
         HashMap<String,String> stringsResult = strings.getVals(decompApi, state, monitor, currentProgram);
         stringsResult.forEach((key, value)-> {
         	// key -> function name
         	// value -> program line
             println(key + " " + value);
-        });*/
+        });
+        
+        /* NetWorkFuncion*/
+        NetWorkFunction network = new NetWorkFunction();
+        HashMap<String,String> networkResult = network.getVals(decompApi, state, monitor, currentProgram, 3);
+        networkResult.forEach((key, value)-> {
+        	// key -> function name
+        	// value -> program line
+            println(key + " " + value);
+        });
+        
         
         
     }

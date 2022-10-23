@@ -250,9 +250,9 @@ public class MemsetUserInputString extends GhidraScript {
             boolean found = false;
             String matched = "";
 
-            //strcmp("password", Stack) ‚Ç‚¿‚ç‚©‚ª–„‚ß‚İ•¶š—ñ‚Å‚ ‚é‚±‚Æ["'].*["'] -> ("password", hogehoge) ‚â(hogehoge,'password')‚ğ‚³‚ª‚·
+            //strcmp("password", Stack) ï¿½Ç‚ï¿½ï¿½ç‚©ï¿½ï¿½ï¿½ï¿½ï¿½ßï¿½ï¿½İ•ï¿½ï¿½ï¿½ï¿½ï¿½Å‚ï¿½ï¿½é‚±ï¿½ï¿½["'].*["'] -> ("password", hogehoge) ï¿½ï¿½(hogehoge,'password')ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             for(String str: decompiled) {
-            	//mac: ƒfƒRƒ“ƒpƒCƒ‹Œ‹‰Ê‚É–„‚ß‚İ•¶š—ñ‚ª‚Å‚Ä‚­‚é‚ªCwin‚ÍPTR__‚Å•\¦‚³‚ê‚é‚Ì‚Å’ˆÓ
+            	//mac: ï¿½fï¿½Rï¿½ï¿½ï¿½pï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½Ê‚É–ï¿½ï¿½ßï¿½ï¿½İ•ï¿½ï¿½ï¿½ï¿½ñ‚ª‚Å‚Ä‚ï¿½ï¿½é‚ªï¿½Cwinï¿½ï¿½PTR__ï¿½Å•\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì‚Å’ï¿½ï¿½ï¿½
             	if(str.contains("cmp")) {
             		//debug
             		//println("ORG:"+str);
@@ -265,15 +265,19 @@ public class MemsetUserInputString extends GhidraScript {
                 if (m.find()){
 					//logger.info(str);
 					String matchstr = m.group();
-					//m.group(1)‚Í‚“‚”‚’‚ƒ‚‚‚Ìˆø”‚ª•\¦‚³‚ê‚éC0‚Í‘S•¶
+					//m.group(1)ï¿½Í‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ìˆï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½C0ï¿½Í‘Sï¿½ï¿½
 					String[] vars = m.group(1).split(",");
 					for(String var: vars) {
 					  if(!result_strncmp.contains(var)) {
 					      result_strncmp.add(var);
 					      boolean res = checkParentValue(var,str,decompiled,f.getName());
 					      if(res) {
-					    	  found = true;
-							  result.put(f.getName(), str);
+					    	  	found = true;
+			            		if(result.get(f.getName()) == null) {
+			            			result.put(f.getName(), str);
+			            		}else {
+			            			result.put(f.getName(), result.get(f.getName()) +"\n"+ str);
+			            		}
 					      }
 					      
 					  }
@@ -302,15 +306,15 @@ public class MemsetUserInputString extends GhidraScript {
 		for(String line :decompiled) {
 			String right  = "";
 			String left   = "";
-	     	//‚¶‚Ô‚ñ‚Ì•Ï”‚ª‚»‚ê‚Á‚Û‚©‚Á‚½‚ço‚·
-	         //ã‚©‚çƒp[ƒX‚µ‚ÄA•Ï”‚Ì‘ã“üŒ³‚ğ’²‚×‚é
+	     	//ï¿½ï¿½ï¿½Ô‚ï¿½Ì•Ïï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Û‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½oï¿½ï¿½
+	         //ï¿½ã‚©ï¿½ï¿½pï¿½[ï¿½Xï¿½ï¿½ï¿½ÄAï¿½Ïï¿½ï¿½Ì‘ï¿½ï¿½ï¿½ï¿½ï¿½ğ’²‚×‚ï¿½
     		String strcmp_line = line; 
     		line = line.replaceAll("[\\(\\)\"\\^\\[\\]\";]", "."); 
     		try {
-    	     	if (line.contains(var)) {//‚»‚êˆÈŠO‚Ì•Ï”‚È‚ç‘ã“ü‚³‚ê‚Ä‚¢‚é‚©’²‚×‚é!var.contains("'") && !var.contains("/") && 
+    	     	if (line.contains(var)) {//ï¿½ï¿½ï¿½ï¿½ÈŠOï¿½Ì•Ïï¿½ï¿½È‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½é‚©ï¿½ï¿½ï¿½×‚ï¿½!var.contains("'") && !var.contains("/") && 
     	     		// hoge = var;
-    	     		// pcvar‚à
-    	     		//strncmp‚ªÅ‰‚¾‚Á‚½‚ç‚â‚ç‚È‚¢
+    	     		// pcvarï¿½ï¿½
+    	     		//strncmpï¿½ï¿½ï¿½Åï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È‚ï¿½
     	   			right = getVariableAndContent(line, true);
     	   			left = getVariableAndContent(line, false);
 
@@ -326,7 +330,7 @@ public class MemsetUserInputString extends GhidraScript {
                     	found = true;
                     }else {
                     	found = false;
-                    	//strcmp‚Ì•Ï”¨‚»‚Ì‘ã“üŒ³¨‘ã“ü“à—e‚ªã‹LˆÈŠO‚Ì•Ï”‚¾‚Á‚½‚çA‚»‚Ì•Ï”‚ÅÄ“x’Tõ‚µ‚Ä‚İ‚é
+                    	//strcmpï¿½Ì•Ïï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì‘ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½eï¿½ï¿½ï¿½ï¿½Lï¿½ÈŠOï¿½Ì•Ïï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Aï¿½ï¿½ï¿½Ì•Ïï¿½ï¿½ÅÄ“xï¿½Tï¿½ï¿½ï¿½ï¿½ï¿½Ä‚İ‚ï¿½
                     	//return checkParentValue(right, decompiled, f, flatApi, depth); 
                     }
 

@@ -149,7 +149,7 @@ public class NetWorkFunction extends GhidraScript {
 
    		addSearchedCount();
 
-   		//ŠY“–‚·‚éƒVƒ“ƒ{ƒ‹‚ğQÆ‚µCQÆ‚µ‚½ŠÖ”‚ğo—Í‚·‚é
+   		//ï¿½Yï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Vï¿½ï¿½ï¿½{ï¿½ï¿½ï¿½ï¿½ï¿½Qï¿½Æ‚ï¿½ï¿½Cï¿½Qï¿½Æ‚ï¿½ï¿½ï¿½ï¿½Öï¿½ï¿½ï¿½ï¿½oï¿½Í‚ï¿½ï¿½ï¿½
    		if (sym != null && (sym.getName().matches("socket") || sym.getName().matches("revfrom") || sym.getName().matches("sendto") || sym.getName().matches("bind") || sym.getName().matches("recvmsg") || sym.getName().matches("connect") || sym.getName().matches("sendmsg") || sym.getName().matches("connect"))) {
         		Reference refs[] = sym.getReferences(null);
         		
@@ -250,14 +250,18 @@ public class NetWorkFunction extends GhidraScript {
           boolean found = false;
           String matched = "";
 
-          //strcmp("password", Stack) ‚Ç‚¿‚ç‚©‚ª–„‚ß‚İ•¶š—ñ‚Å‚ ‚é‚±‚Æ["'].*["'] -> ("password", hogehoge) ‚â(hogehoge,'password')‚ğ‚³‚ª‚·
+          //strcmp("password", Stack) ï¿½Ç‚ï¿½ï¿½ç‚©ï¿½ï¿½ï¿½ï¿½ï¿½ßï¿½ï¿½İ•ï¿½ï¿½ï¿½ï¿½ï¿½Å‚ï¿½ï¿½é‚±ï¿½ï¿½["'].*["'] -> ("password", hogehoge) ï¿½ï¿½(hogehoge,'password')ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
           for(String str: decompiled) {
-          	//mac: ƒfƒRƒ“ƒpƒCƒ‹Œ‹‰Ê‚É–„‚ß‚İ•¶š—ñ‚ª‚Å‚Ä‚­‚é‚ªCwin‚ÍPTR__‚Å•\¦‚³‚ê‚é‚Ì‚Å’ˆÓ
+          	//mac: ï¿½fï¿½Rï¿½ï¿½ï¿½pï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½Ê‚É–ï¿½ï¿½ßï¿½ï¿½İ•ï¿½ï¿½ï¿½ï¿½ñ‚ª‚Å‚Ä‚ï¿½ï¿½é‚ªï¿½Cwinï¿½ï¿½PTR__ï¿½Å•\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì‚Å’ï¿½ï¿½ï¿½
           	if(str.contains("cmp")) {
           		//debug
           		//println("ORG:"+str);
           		//logger.info("ORG:"+str);
-          		result.put(f.getName(), str);
+          		if(result.get(f.getName()) == null) {
+        			result.put(f.getName(), str);
+        		}else {
+        			result.put(f.getName(), result.get(f.getName()) +"\n"+ str);
+        		}
           	}
           	/*
               String regex = ".*str.*cmp(.*\".*\".*).*";
@@ -266,7 +270,7 @@ public class NetWorkFunction extends GhidraScript {
               if (m.find()){
 					//logger.info(str);
 					String matchstr = m.group();
-					//m.group(1)‚Í‚“‚”‚’‚ƒ‚‚‚Ìˆø”‚ª•\¦‚³‚ê‚éC0‚Í‘S•¶
+					//m.group(1)ï¿½Í‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ìˆï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½C0ï¿½Í‘Sï¿½ï¿½
 					String[] vars = m.group(1).split(",");
 					for(String var: vars) {
 					  if(!result_strncmp.contains(var)) {
